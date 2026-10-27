@@ -1,5 +1,5 @@
 flask
-holidays
 google-generativeai
 python-dotenv
 gunicorn
+pytest
