@@ -1,6 +1,6 @@
 @echo off
 setlocal
-rem 이 파일이 있는 폴더(프로젝트 폴더)로 먼저 이동한다. 한글 경로도 문제없도록 글자 설정보다 먼저 한다
+rem Move to this file's folder first (before chcp). Keep lines before chcp ASCII only.
 pushd "%~dp0"
 chcp 65001 >nul
 rem 레시피 믹스 실행 파일 - 더블클릭하면 서버를 켜고 브라우저를 연다. 끄려면 이 창에서 Ctrl+C
