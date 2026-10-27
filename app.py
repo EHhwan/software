@@ -19,6 +19,12 @@ try:  # .env 파일의 GEMINI_API_KEY 등을 환경변수로 읽는다 (배포 �
 except ImportError:
     pass
 
+# 마감·셔틀 판정은 datetime.now() 기준이다. 배포 서버(Render 등)는 보통 UTC 라서 9시간 어긋나므로
+# 프로세스 시간대를 한국 시간으로 고정한다. (Windows 에는 tzset 이 없어 로컬 PC 시간 그대로 사용)
+os.environ.setdefault("TZ", "Asia/Seoul")
+if hasattr(time, "tzset"):
+    time.tzset()
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-campus-fit-change-me")
 app.permanent_session_lifetime = timedelta(days=30)
