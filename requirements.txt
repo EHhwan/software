@@ -1,0 +1,4 @@
+flask
+holidays
+google-generativeai
+python-dotenv

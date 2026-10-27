@@ -10,7 +10,14 @@ from flask import (Flask, abort, flash, g, redirect, render_template, request,
                    session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import ai       # Gemini: 한 줄 문장 → 작성 폼 자동 채우기
 import shuttle  # 하교 셔틀 시간표 + '끝난 뒤 탈 셔틀' 판정
+
+try:  # .env 파일의 GEMINI_API_KEY 등을 환경변수로 읽는다 (배포 서버에서는 환경변수를 직접 등록)
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-campus-fit-change-me")
@@ -48,6 +55,9 @@ DEFAULT_DURATION = 60
 LOCK_AFTER = 5        # 비밀번호를 이 횟수만큼 틀리면
 LOCK_SECONDS = 300    # 이 시간(초) 동안 잠금
 CLOSED_LIMIT = 20     # 목록에는 마감된 글을 최근 순으로 이 개수까지만 표시
+AI_LIMIT = 5          # AI 자동 작성은 접속지마다
+AI_WINDOW = 60        # 이 시간(초) 동안 이 횟수까지만 (로그인이 없으므로 API 할당량 보호)
+AI_TEXT_MAX = 200     # AI 에 보내는 문장 최대 길이
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS posts (
@@ -84,6 +94,12 @@ CREATE TABLE IF NOT EXISTS pw_fails (
     fail_count   INTEGER NOT NULL DEFAULT 0,
     locked_until REAL    NOT NULL DEFAULT 0,
     PRIMARY KEY (post_id, ip)
+);
+
+-- AI 자동 작성 호출 기록(접속지 단위, 횟수 제한용)
+CREATE TABLE IF NOT EXISTS ai_calls (
+    ip TEXT NOT NULL,
+    at REAL NOT NULL
 );
 """
 
@@ -509,6 +525,40 @@ def api_shuttle():
         "routes": shuttle.check_all(meet, end),
     }
     return resp, 200, {"Cache-Control": "no-store"}
+
+
+def _ai_rate_limited():
+    """접속지마다 AI_WINDOW 초 동안 AI_LIMIT 회까지만 허용한다. 초과면 True."""
+    db = get_db()
+    ip = request.remote_addr or "?"
+    now = time.time()
+    db.execute("BEGIN IMMEDIATE")
+    db.execute("DELETE FROM ai_calls WHERE at < ?", (now - AI_WINDOW,))
+    used = db.execute("SELECT COUNT(*) FROM ai_calls WHERE ip = ?", (ip,)).fetchone()[0]
+    if used >= AI_LIMIT:
+        db.commit()
+        return True
+    db.execute("INSERT INTO ai_calls VALUES (?, ?)", (ip, now))
+    db.commit()
+    return False
+
+
+@app.post("/api/ai/draft")
+def api_ai_draft():
+    """작성 화면의 '✨ AI로 채우기': 한 줄 문장을 Gemini 로 분석해 폼에 채울 값을 돌려준다.
+    글을 직접 등록하지는 않는다. 사용자가 채워진 폼을 확인하고 [등록]을 눌러야 /new 검증을 거쳐 저장된다."""
+    text = " ".join(request.form.get("text", "").split())
+    if not 5 <= len(text) <= AI_TEXT_MAX:
+        return {"ok": False, "error": f"5~{AI_TEXT_MAX}자로 적어 주세요."}, 400
+    if _ai_rate_limited():
+        return {"ok": False, "error": "AI를 너무 자주 불렀어요. 1분 뒤에 다시 시도해 주세요."}, 429
+    try:
+        fields = ai.draft_post(text, datetime.now(), CATEGORIES, DURATIONS)
+    except ai.AIUnavailable as e:
+        app.logger.warning("AI draft failed: %s", e)
+        return {"ok": False, "error": "AI가 지금 응답하지 않아요. 아래 폼에 직접 입력해 주세요."}, 503
+    missing = [k for k in ("title", "category", "meet_time", "max_people", "location") if not fields[k]]
+    return {"ok": True, "fields": fields, "missing": missing}, 200, {"Cache-Control": "no-store"}
 
 
 @app.errorhandler(404)

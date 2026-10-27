@@ -6,6 +6,8 @@
   <h1 class="text-2xl font-extrabold mb-1">번개 만들기 ⚡</h1>
   <p class="text-sm text-slate-500 font-semibold mb-5">로그인 없이 비밀번호 4자리만 정하면 끝! 방장도 인원에 포함돼요.</p>
 
+  {% include "_ai_draft.html" %}
+
   <form method="post" class="bg-white rounded-3xl shadow-lg p-6 space-y-5">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
