@@ -1,0 +1,2 @@
+# Windows 실행 파일은 줄바꿈을 CRLF 로 유지해야 cmd 에서 제대로 실행된다
+*.cmd text eol=crlf

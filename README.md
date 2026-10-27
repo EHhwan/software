@@ -24,6 +24,9 @@ docs/                요구사항, 검증 기록
 instance/            SQLite DB 파일 (자동 생성, GitHub에 올라가지 않음)
 ```
 
+## 간단 실행 (Windows)
+프로젝트 폴더의 **`start.cmd` 를 더블클릭**하면 가상환경 확인 → 패키지 설치 → `.env` 확인 → 서버 실행 → 브라우저 열기까지 한 번에 된다. 끄려면 검은 창에서 `Ctrl + C`.
+
 ## 내 노트북에서 처음 설정하기 (Windows)
 1. 설치: Python 3.12 이상(설치할 때 "Add python.exe to PATH" 체크), Git, VS Code(+ Python 확장)
 2. 코드 받기
