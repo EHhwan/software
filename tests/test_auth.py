@@ -47,7 +47,7 @@ def login(client, username="cook01", password="password123", next_url=None):
 def test_index_and_404(client):
     assert client.get("/").status_code == 200
     r = client.get("/no-such-page")
-    assert r.status_code == 404 and "없는 페이지" in r.get_data(as_text=True)
+    assert r.status_code == 404 and "냄비가 비어 있어요" in r.get_data(as_text=True)
 
 
 def test_database_url(tmp_path, monkeypatch):

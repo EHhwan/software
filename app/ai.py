@@ -5,7 +5,7 @@
 """
 import os
 
-DEFAULT_MODEL = "gemini-2.0-flash"  # 안내문 예제 기준. AI Studio 에서 지금 쓸 수 있는 모델명을 확인해 .env 의 GEMINI_MODEL 로 바꾼다
+DEFAULT_MODEL = "gemini-3.6-flash"  # gemini-2.0-flash 는 서비스 종료됨. 모델명이 바뀌면 .env 의 GEMINI_MODEL 로 바꾼다
 TIMEOUT_SEC = 30                    # 레시피 생성은 답이 길어 시간이 걸린다
 
 _model = None

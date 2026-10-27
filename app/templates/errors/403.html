@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}권한이 없어요 · {{ SERVICE_NAME }}{% endblock %}
+{% block title %}이 요리는 작성자만 손댈 수 있어요 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
 <div class="text-center py-5">
-  <p class="display-4 fw-bold text-secondary">403</p>
-  <p class="fw-semibold mb-1">권한이 없어요</p>
-  <p class="text-secondary">작성자만 할 수 있는 작업이에요.</p>
-  <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">처음으로</a>
+  <div class="rm-error-emoji" aria-hidden="true">🔒</div>
+  <p class="text-muted-rm fw-bold mt-3 mb-1">403</p>
+  <h1 class="h4 fw-black mb-2">이 요리는 작성자만 손댈 수 있어요</h1>
+  <p class="text-muted-rm mb-4">다른 사람의 레시피는 수정하거나 삭제할 수 없어요.</p>
+  <a class="btn btn-rm" href="{{ url_for('main.index') }}">처음으로 →</a>
 </div>
 {% endblock %}

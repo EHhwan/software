@@ -1,26 +1,28 @@
 {% extends "base.html" %}
-{% from "_macros.html" import field %}
+{% from "_macros.html" import field, password_toggle_script %}
 {% block title %}로그인 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-sm-10 col-md-6 col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 fw-bold mb-4">로그인</h1>
-        {# action 을 비워 두면 ?next=... 가 그대로 유지되어 로그인 후 원래 보던 페이지로 돌아간다 #}
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          {{ field(form.username, autocomplete="username", autofocus=true) }}
-          {{ field(form.password, autocomplete="current-password") }}
-          <div class="form-check mb-3">
-            {{ form.remember(class="form-check-input") }} {{ form.remember.label(class="form-check-label") }}
-          </div>
-          {{ form.submit(class="btn btn-warning w-100 fw-semibold") }}
-        </form>
-        <p class="text-center small mt-3 mb-0">처음이신가요? <a href="{{ url_for('auth.register') }}">회원가입</a></p>
-      </div>
+  <div class="col-sm-10 col-md-7 col-lg-5">
+    <div class="rm-panel p-4 p-md-5">
+      <div class="rm-panel-emoji" aria-hidden="true">👋</div>
+      <h1 class="h4 fw-black text-center mb-1">다시 만나서 반가워요</h1>
+      <p class="text-center text-muted-rm small mb-4">로그인하고 오늘의 레시피를 섞어 보세요.</p>
+      {# action 을 비워 두면 ?next=... 가 그대로 유지되어 로그인 후 원래 보던 페이지로 돌아간다 #}
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.username, autocomplete="username", autofocus=true) }}
+        {{ field(form.password, autocomplete="current-password") }}
+        <div class="form-check mb-3">
+          {{ form.remember(class="form-check-input") }} {{ form.remember.label(class="form-check-label small fw-semibold") }}
+        </div>
+        {{ form.submit(class="btn btn-rm w-100") }}
+      </form>
+      <p class="text-center small mt-4 mb-0 text-muted-rm">처음이신가요? <a class="fw-bold" href="{{ url_for('auth.register') }}">회원가입</a></p>
     </div>
   </div>
 </div>
 {% endblock %}
+
+{% block scripts %}{{ password_toggle_script() }}{% endblock %}

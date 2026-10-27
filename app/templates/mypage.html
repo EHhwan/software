@@ -1,39 +1,46 @@
 {% extends "base.html" %}
-{% from "_macros.html" import recipe_cards %}
+{% from "_macros.html" import recipe_cards, empty_box %}
 {% block title %}마이페이지 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
-<section class="card shadow-sm mb-4">
-  <div class="card-body d-flex flex-wrap align-items-center gap-3">
-    <div class="fs-1">👤</div>
-    <div>
-      <h1 class="h4 fw-bold mb-1">{{ current_user.nickname }}</h1>
-      <p class="text-secondary small mb-0">@{{ current_user.username }} · {{ current_user.created_at|kst }} 가입</p>
+<section class="rm-profile mb-4">
+  <div class="rm-profile-banner"></div>
+  <div class="px-4 pb-4 d-flex flex-wrap align-items-end gap-3">
+    <div class="rm-avatar" aria-hidden="true">{{ current_user.nickname[:1] }}</div>
+    <div class="me-auto">
+      <h1 class="h4 fw-black mb-0">{{ current_user.nickname }}</h1>
+      <p class="text-muted-rm small mb-0">@{{ current_user.username }} · {{ current_user.created_at|kst }} 가입</p>
     </div>
-    <div class="ms-auto text-center">
-      <div class="fw-bold fs-5">{{ mine|length }}</div><div class="small text-secondary">내 레시피</div>
-    </div>
-    <div class="text-center">
-      <div class="fw-bold fs-5">{{ ai_made|length }}</div><div class="small text-secondary">AI 레시피</div>
+    <div class="d-flex gap-2">
+      <div class="rm-stat"><strong>{{ mine|length }}</strong><span>내 레시피</span></div>
+      <div class="rm-stat"><strong>{{ ai_made|length }}</strong><span>AI 레시피</span></div>
     </div>
   </div>
 </section>
 
-<ul class="nav nav-tabs mb-3" role="tablist">
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mine" type="button" role="tab">내가 등록한 레시피</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ai" type="button" role="tab">AI로 만든 레시피</button>
-  </li>
-</ul>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <ul class="nav rm-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mine" type="button" role="tab"
+              aria-controls="tab-mine" aria-selected="true">📖 내 레시피</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ai" type="button" role="tab"
+              aria-controls="tab-ai" aria-selected="false">✨ AI 레시피</button>
+    </li>
+  </ul>
+  {# TODO(2차): 레시피 등록 페이지로 연결 #}
+  <span class="btn btn-rm btn-rm-sm disabled" aria-disabled="true">+ 레시피 등록 <span class="rm-soon ms-1">준비 중</span></span>
+</div>
+
 <div class="tab-content">
   <div class="tab-pane fade show active" id="tab-mine" role="tabpanel">
-    {# TODO(2차): 레시피 등록 버튼 #}
-    {{ recipe_cards(mine, "아직 등록한 레시피가 없어요.") }}
+    {% if mine %}{{ recipe_cards(mine) }}
+    {% else %}{{ empty_box("📝", "아직 등록한 레시피가 없어요", "자주 해 먹는 요리부터 올려 보세요. 다른 사람이 AI 믹스 재료로 쓸 수 있어요.") }}{% endif %}
   </div>
   <div class="tab-pane fade" id="tab-ai" role="tabpanel">
-    {{ recipe_cards(ai_made, "AI 믹스나 재료 추천으로 만든 레시피가 여기에 모여요.") }}
+    {% if ai_made %}{{ recipe_cards(ai_made) }}
+    {% else %}{{ empty_box("✨", "AI로 만든 레시피가 여기에 모여요", "AI 믹스나 재료 추천으로 만든 레시피를 저장하면 보여 드려요.") }}{% endif %}
   </div>
 </div>
 {% endblock %}

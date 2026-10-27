@@ -1,23 +1,64 @@
 {% extends "base.html" %}
-{% from "_macros.html" import recipe_cards %}
+{% from "_macros.html" import recipe_cards, empty_box %}
 
 {% block content %}
-<section class="p-4 p-md-5 mb-4 rounded-4 bg-white border">
-  <h1 class="fw-bold">두 레시피를 섞어 새로운 요리를 🍳</h1>
-  <p class="text-secondary mb-0">내 레시피와 다른 사람의 레시피를 골라 AI로 조합하거나, 지금 있는 재료로 만들 수 있는 요리를 추천받아요.</p>
-  {% if not current_user.is_authenticated %}
-  <a class="btn btn-warning fw-semibold mt-3" href="{{ url_for('auth.register') }}">시작하기</a>
-  {% endif %}
+<section class="rm-hero mb-4 mb-md-5">
+  <span class="rm-float f1" aria-hidden="true">🍅</span>
+  <span class="rm-float f2" aria-hidden="true">🍳</span>
+  <span class="rm-float f3" aria-hidden="true">🧄</span>
+  <span class="rm-float f4" aria-hidden="true">🌶️</span>
+  <div class="rm-hero-content">
+    <span class="rm-ai mb-3">✨ Gemini AI</span>
+    <h1 class="mt-3 mb-3">두 레시피를 섞으면<br><span class="rm-mark">새로운 요리</span>가 돼요</h1>
+    <p class="text-muted-rm fs-6 mb-4">내 레시피와 다른 사람의 레시피를 골라 AI로 조합하고,<br class="d-none d-md-inline">
+      냉장고에 있는 재료로 만들 수 있는 요리를 추천받아요.</p>
+    {% if current_user.is_authenticated %}
+      <a class="btn btn-rm" href="{{ url_for('main.mypage') }}">내 레시피 보러 가기 →</a>
+    {% else %}
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-rm" href="{{ url_for('auth.register') }}">무료로 시작하기 →</a>
+        <a class="btn btn-rm-outline" href="{{ url_for('auth.login') }}">로그인</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="row g-3 g-md-4 mb-5">
+  <div class="col-md-4">
+    <div class="rm-feature">
+      <div class="rm-icon t1">📖</div>
+      <h2 class="h6 fw-bold d-flex align-items-center gap-2">레시피 공유 <span class="rm-soon">곧 열려요</span></h2>
+      <p class="small text-muted-rm mb-0">재료와 순서만 적으면 끝. 사진 없이도 내 레시피를 올리고 좋아요를 받아요.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="rm-feature">
+      <div class="rm-icon t2">✨</div>
+      <h2 class="h6 fw-bold d-flex align-items-center gap-2">AI 레시피 믹스 <span class="rm-soon">곧 열려요</span></h2>
+      <p class="small text-muted-rm mb-0">두 레시피의 재료·양념·순서를 AI가 분석해 어울리는 새 레시피와 바뀐 이유를 알려 줘요.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="rm-feature">
+      <div class="rm-icon t3">🧺</div>
+      <h2 class="h6 fw-bold d-flex align-items-center gap-2">재료로 추천 <span class="rm-soon">곧 열려요</span></h2>
+      <p class="small text-muted-rm mb-0">가진 재료를 적으면 만들 수 있는 요리와 부족한 재료의 대체품까지 제안해요.</p>
+    </div>
+  </div>
 </section>
 
 <section class="mb-5">
-  <h2 class="h5 fw-bold mb-3">🔥 인기 레시피</h2>
-  {# TODO(3차): 좋아요 수 기준 정렬 #}
-  {{ recipe_cards([], "인기 레시피는 좋아요 기능이 생기면 보여 드려요.") }}
+  <h2 class="rm-section-title"><span class="rm-chip">🔥</span>인기 레시피</h2>
+  {# TODO(3차): 좋아요 수 기준 정렬 (AI 사용 안 함) #}
+  {{ empty_box("🏆", "인기 순위를 준비하고 있어요", "좋아요 기능이 열리면 가장 사랑받는 레시피를 보여 드려요.") }}
 </section>
 
 <section>
-  <h2 class="h5 fw-bold mb-3">🆕 최신 레시피</h2>
-  {{ recipe_cards(latest, "아직 등록된 레시피가 없어요.") }}
+  <h2 class="rm-section-title"><span class="rm-chip">🆕</span>최신 레시피</h2>
+  {% if latest %}
+    {{ recipe_cards(latest) }}
+  {% else %}
+    {{ empty_box("🍲", "아직 등록된 레시피가 없어요", "레시피 등록 기능이 열리면 첫 번째 레시피의 주인공이 되어 보세요!") }}
+  {% endif %}
 </section>
 {% endblock %}

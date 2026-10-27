@@ -1,24 +1,26 @@
 {% extends "base.html" %}
-{% from "_macros.html" import field %}
+{% from "_macros.html" import field, password_toggle_script %}
 {% block title %}회원가입 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-sm-10 col-md-6 col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 fw-bold mb-4">회원가입</h1>
-        <form method="post" novalidate>
-          {{ form.hidden_tag() }}
-          {{ field(form.username, help="영어 소문자·숫자·_(밑줄) 4~20자. 로그인할 때 써요.", autocomplete="username", maxlength=20) }}
-          {{ field(form.nickname, help="레시피 작성자로 보이는 이름이에요. (2~12자)", maxlength=12) }}
-          {{ field(form.password, help="8자 이상", autocomplete="new-password", maxlength=64) }}
-          {{ field(form.password2, autocomplete="new-password", maxlength=64) }}
-          {{ form.submit(class="btn btn-warning w-100 fw-semibold") }}
-        </form>
-        <p class="text-center small mt-3 mb-0">이미 계정이 있나요? <a href="{{ url_for('auth.login') }}">로그인</a></p>
-      </div>
+  <div class="col-sm-10 col-md-7 col-lg-5">
+    <div class="rm-panel p-4 p-md-5">
+      <div class="rm-panel-emoji" aria-hidden="true">🧑‍🍳</div>
+      <h1 class="h4 fw-black text-center mb-1">레시피 믹스 시작하기</h1>
+      <p class="text-center text-muted-rm small mb-4">가입하면 레시피를 올리고 AI로 섞어 볼 수 있어요.</p>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.username, help="영어 소문자·숫자·_(밑줄) 4~20자 · 로그인할 때 써요", autocomplete="username", maxlength=20, placeholder="예) cook_master") }}
+        {{ field(form.nickname, help="레시피 작성자로 보이는 이름이에요 (2~12자)", maxlength=12, placeholder="예) 자취요리왕") }}
+        {{ field(form.password, help="8자 이상", autocomplete="new-password", maxlength=64) }}
+        {{ field(form.password2, autocomplete="new-password", maxlength=64) }}
+        {{ form.submit(class="btn btn-rm w-100 mt-2") }}
+      </form>
+      <p class="text-center small mt-4 mb-0 text-muted-rm">이미 계정이 있나요? <a class="fw-bold" href="{{ url_for('auth.login') }}">로그인</a></p>
     </div>
   </div>
 </div>
 {% endblock %}
+
+{% block scripts %}{{ password_toggle_script() }}{% endblock %}

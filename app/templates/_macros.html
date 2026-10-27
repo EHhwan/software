@@ -1,32 +1,67 @@
-{# 입력 칸 + 오류 메시지를 Bootstrap 모양으로 그려 주는 도우미 #}
+{# 입력 칸 + 오류 메시지를 그려 주는 도우미. 비밀번호 칸에는 [보기] 버튼이 붙는다. #}
 {% macro field(f, help='') %}
 <div class="mb-3">
-  {{ f.label(class="form-label fw-semibold") }}
+  {{ f.label(class="form-label") }}
+  {% if f.type == 'PasswordField' %}
+  <div class="rm-pw">
+    {{ f(class="form-control" ~ (" is-invalid" if f.errors else ""), **kwargs) }}
+    <button type="button" class="rm-pw-toggle" data-pw-toggle="{{ f.id }}" aria-label="비밀번호 보기">보기</button>
+    {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+  </div>
+  {% else %}
   {{ f(class="form-control" ~ (" is-invalid" if f.errors else ""), **kwargs) }}
   {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+  {% endif %}
+  {% if help and not f.errors %}<div class="form-text">{{ help }}</div>{% endif %}{# 오류가 있으면 오류 문구만 #}
 </div>
 {% endmacro %}
 
-{# 레시피 카드 목록 (메인, 마이페이지 공용) #}
-{% macro recipe_cards(recipes, empty) %}
-  {% if recipes %}
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-    {% for r in recipes %}
-    <div class="col">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <h3 class="h6 card-title fw-bold mb-1">
-            {% if r.is_ai %}<span class="badge text-bg-warning me-1">AI</span>{% endif %}{{ r.title }}
-          </h3>
-          <p class="card-text small text-secondary mb-2 text-truncate">{{ r.description }}</p>
-          <p class="small mb-0 text-secondary">{{ r.servings }}인분 · {{ r.cook_time_min }}분 · {{ r.author.nickname }}</p>
+{# 비밀번호 [보기]/[숨기기] - 폼이 있는 페이지의 scripts 블록에서 불러온다 #}
+{% macro password_toggle_script() %}
+<script>
+  document.querySelectorAll('[data-pw-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.dataset.pwToggle);
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? '숨기기' : '보기';
+      btn.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기');
+    });
+  });
+</script>
+{% endmacro %}
+
+{# 비어 있을 때 보여 줄 상자 #}
+{% macro empty_box(emoji, title, desc='') %}
+<div class="rm-empty">
+  <div class="rm-empty-emoji" aria-hidden="true">{{ emoji }}</div>
+  <p class="fw-bold mt-2 mb-1">{{ title }}</p>
+  {% if desc %}<p class="small text-muted-rm mb-0">{{ desc }}</p>{% endif %}
+  {{ caller() if caller }}
+</div>
+{% endmacro %}
+
+{# 레시피 카드 목록 (메인, 마이페이지 공용). 사진이 없으므로 레시피마다 색과 이모지를 정해 보여 준다. #}
+{% macro recipe_cards(recipes) %}
+{% set EMOJI = ['🍲', '🍝', '🥘', '🍛', '🥗', '🍜', '🥟', '🍳'] %}
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 g-md-4">
+  {% for r in recipes %}
+  <div class="col">
+    <article class="rm-card">
+      <div class="rm-thumb g{{ r.id % 4 }}" aria-hidden="true">{{ EMOJI[r.id % 8] }}</div>
+      <div class="p-3">
+        <h3 class="h6 fw-bold mb-1 d-flex align-items-center gap-2">
+          {% if r.is_ai %}<span class="rm-ai">AI</span>{% endif %}<span class="text-truncate">{{ r.title }}</span>
+        </h3>
+        <p class="small text-muted-rm mb-3 text-truncate">{{ r.description or '설명이 없어요' }}</p>
+        <div class="d-flex flex-wrap gap-1">
+          <span class="rm-pill">🍽️ {{ r.servings }}인분</span>
+          <span class="rm-pill">⏱️ {{ r.cook_time_min }}분</span>
+          <span class="rm-pill">👤 {{ r.author.nickname }}</span>
         </div>
       </div>
-    </div>
-    {% endfor %}
+    </article>
   </div>
-  {% else %}
-  <div class="text-center text-secondary py-5 border rounded-3 bg-white">{{ empty }}</div>
-  {% endif %}
+  {% endfor %}
+</div>
 {% endmacro %}
