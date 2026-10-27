@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}없는 페이지예요 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+  <p class="display-4 fw-bold text-secondary">404</p>
+  <p class="fw-semibold mb-1">없는 페이지예요</p>
+  <p class="text-secondary">삭제됐거나 주소가 잘못됐을 수 있어요.</p>
+  <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">처음으로</a>
+</div>
+{% endblock %}

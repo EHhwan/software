@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}권한이 없어요 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+  <p class="display-4 fw-bold text-secondary">403</p>
+  <p class="fw-semibold mb-1">권한이 없어요</p>
+  <p class="text-secondary">작성자만 할 수 있는 작업이에요.</p>
+  <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">처음으로</a>
+</div>
+{% endblock %}

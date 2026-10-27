@@ -1,0 +1,3 @@
+/* Bootstrap 위에 덮어쓰는 스타일 */
+body { word-break: keep-all; }
+.navbar-brand { letter-spacing: -0.02em; }

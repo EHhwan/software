@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}잠시 문제가 생겼어요 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+  <p class="display-4 fw-bold text-secondary">500</p>
+  <p class="fw-semibold mb-1">잠시 문제가 생겼어요</p>
+  <p class="text-secondary">잠시 뒤 다시 시도해 주세요.</p>
+  <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">처음으로</a>
+</div>
+{% endblock %}

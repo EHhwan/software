@@ -5,7 +5,7 @@ import os
 
 from dotenv import load_dotenv
 
-import ai
+from app import ai
 
 load_dotenv()
 

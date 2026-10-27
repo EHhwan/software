@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import recipe_cards %}
+
+{% block content %}
+<section class="p-4 p-md-5 mb-4 rounded-4 bg-white border">
+  <h1 class="fw-bold">두 레시피를 섞어 새로운 요리를 🍳</h1>
+  <p class="text-secondary mb-0">내 레시피와 다른 사람의 레시피를 골라 AI로 조합하거나, 지금 있는 재료로 만들 수 있는 요리를 추천받아요.</p>
+  {% if not current_user.is_authenticated %}
+  <a class="btn btn-warning fw-semibold mt-3" href="{{ url_for('auth.register') }}">시작하기</a>
+  {% endif %}
+</section>
+
+<section class="mb-5">
+  <h2 class="h5 fw-bold mb-3">🔥 인기 레시피</h2>
+  {# TODO(3차): 좋아요 수 기준 정렬 #}
+  {{ recipe_cards([], "인기 레시피는 좋아요 기능이 생기면 보여 드려요.") }}
+</section>
+
+<section>
+  <h2 class="h5 fw-bold mb-3">🆕 최신 레시피</h2>
+  {{ recipe_cards(latest, "아직 등록된 레시피가 없어요.") }}
+</section>
+{% endblock %}

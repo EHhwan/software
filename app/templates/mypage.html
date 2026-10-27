@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import recipe_cards %}
+{% block title %}마이페이지 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<section class="card shadow-sm mb-4">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <div class="fs-1">👤</div>
+    <div>
+      <h1 class="h4 fw-bold mb-1">{{ current_user.nickname }}</h1>
+      <p class="text-secondary small mb-0">@{{ current_user.username }} · {{ current_user.created_at|kst }} 가입</p>
+    </div>
+    <div class="ms-auto text-center">
+      <div class="fw-bold fs-5">{{ mine|length }}</div><div class="small text-secondary">내 레시피</div>
+    </div>
+    <div class="text-center">
+      <div class="fw-bold fs-5">{{ ai_made|length }}</div><div class="small text-secondary">AI 레시피</div>
+    </div>
+  </div>
+</section>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mine" type="button" role="tab">내가 등록한 레시피</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ai" type="button" role="tab">AI로 만든 레시피</button>
+  </li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-mine" role="tabpanel">
+    {# TODO(2차): 레시피 등록 버튼 #}
+    {{ recipe_cards(mine, "아직 등록한 레시피가 없어요.") }}
+  </div>
+  <div class="tab-pane fade" id="tab-ai" role="tabpanel">
+    {{ recipe_cards(ai_made, "AI 믹스나 재료 추천으로 만든 레시피가 여기에 모여요.") }}
+  </div>
+</div>
+{% endblock %}

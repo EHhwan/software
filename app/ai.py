@@ -1,17 +1,18 @@
-"""Gemini API 연결 모듈. 서비스의 AI 기능은 모두 이 파일의 ask() 를 거쳐 호출한다.
+"""Gemini API 연결. 서비스의 AI 호출은 모두 이 파일을 거치고, 반드시 Flask 서버에서만 실행된다.
+(API 키가 브라우저로 내려가지 않도록 화면의 JavaScript 에서는 Gemini 를 직접 부르지 않는다)
 
-AI 기능 자체(프롬프트 설계, 응답 검증)는 12주차에 이 파일에 추가한다.
+레시피 믹스(4차)와 보유 재료 추천(5차)의 프롬프트·응답 검증은 이후 단계에서 이 파일에 추가한다.
 """
 import os
 
 DEFAULT_MODEL = "gemini-2.0-flash"  # 안내문 예제 기준. AI Studio 에서 지금 쓸 수 있는 모델명을 확인해 .env 의 GEMINI_MODEL 로 바꾼다
-TIMEOUT_SEC = 10
+TIMEOUT_SEC = 30                    # 레시피 생성은 답이 길어 시간이 걸린다
 
 _model = None
 
 
 class AIUnavailable(Exception):
-    """API 키가 없거나, 응답이 없거나, 오류가 났을 때. 화면에서는 이 예외를 잡아 안내 문구를 보여 준다."""
+    """API 키가 없거나, 응답이 없거나, 사용량 제한에 걸렸을 때. 화면에서는 이 예외를 잡아 안내 문구를 보여 준다."""
 
 
 def _get_model():
@@ -37,5 +38,5 @@ def ask(prompt, **generation_config):
         return res.text
     except AIUnavailable:
         raise
-    except Exception as e:  # 네트워크 오류, 시간 초과, 할당량 초과, 안전 차단 등
+    except Exception as e:  # 네트워크 오류, 시간 초과, 사용량 제한(429), 안전 차단 등
         raise AIUnavailable(str(e)) from e
