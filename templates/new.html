@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}번개 만들기{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <h1 class="text-2xl font-extrabold mb-1">번개 만들기 ⚡</h1>
+  <p class="text-sm text-slate-500 font-semibold mb-5">로그인 없이 비밀번호 4자리만 정하면 끝! 방장도 인원에 포함돼요.</p>
+
+  <form method="post" class="bg-white rounded-3xl shadow-lg p-6 space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div>
+      <label class="block text-sm font-bold mb-2">카테고리</label>
+      <div class="flex flex-wrap gap-2">
+        {% for c in CATEGORIES %}
+        <label class="cursor-pointer">
+          <input type="radio" name="category" value="{{ c }}" class="peer sr-only" required
+                 {{ 'checked' if form.get('category') == c }}>
+          <span class="inline-block rounded-full px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 transition {{ CAT_META[c].ring }}">
+            {{ CAT_META[c].emoji }} {{ c }}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="title">제목</label>
+      <input id="title" name="title" maxlength="40" required value="{{ form.get('title', '') }}"
+             placeholder="예) 지금 체육관에서 3대3 농구 하실 분!"
+             class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="location">모이는 장소</label>
+      <div class="flex gap-2">
+        <input id="location" name="location" maxlength="40" required autocomplete="off"
+               value="{{ form.get('location', '') }}"
+               placeholder="예) 한국대학교 학생회관"
+               class="flex-1 min-w-0 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">
+        <button type="button" id="btn-search"
+                class="shrink-0 rounded-2xl bg-slate-800 text-white font-bold px-4 hover:bg-slate-700 active:scale-95 transition">
+          📍 위치 찾기
+        </button>
+      </div>
+
+      <!-- 지도에서 찾은 값: 폼 제출 시 Flask로 같이 전송돼요 -->
+      <input type="hidden" id="lat" name="lat" value="{{ form.get('lat', '') }}">
+      <input type="hidden" id="lng" name="lng" value="{{ form.get('lng', '') }}">
+      <input type="hidden" id="address" name="address" value="{{ form.get('address', '') }}">
+
+      <ul id="map-results" class="mt-2 space-y-1 hidden"></ul>
+      <p id="map-status" class="mt-2 text-xs font-semibold text-slate-400">
+        장소명이나 주소를 입력하고 [위치 찾기]를 누르면 지도에 핀이 찍혀요. 지도를 직접 눌러 핀을 옮길 수도 있어요. (선택)
+      </p>
+      <div id="map" class="mt-2 h-64 rounded-2xl overflow-hidden bg-slate-100 border-2 border-slate-100"></div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="meet_time">모임 시간</label>
+      <div class="flex flex-wrap gap-2 mb-2">
+        <!-- '지금 바로'는 5분 뒤로 맞춰요 (같은 분에 만들면 곧바로 마감돼 버리기 때문) -->
+        <button type="button" onclick="setIn(5)" class="rounded-full bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5 hover:bg-orange-200">⚡ 지금 바로 (5분 뒤 시작)</button>
+        <button type="button" onclick="setIn(30)" class="rounded-full bg-pink-100 text-pink-700 text-sm font-bold px-3 py-1.5 hover:bg-pink-200">30분 뒤 시작</button>
+        <button type="button" onclick="setIn(60)" class="rounded-full bg-violet-100 text-violet-700 text-sm font-bold px-3 py-1.5 hover:bg-violet-200">1시간 뒤 시작</button>
+        <button type="button" onclick="setIn(120)" class="rounded-full bg-sky-100 text-sky-700 text-sm font-bold px-3 py-1.5 hover:bg-sky-200">2시간 뒤 시작</button>
+      </div>
+      <input id="meet_time" name="meet_time" type="datetime-local" required
+             min="{{ min_time }}" value="{{ form.get('meet_time', default_time) }}"
+             class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="duration">예상 소요 시간</label>
+      <select id="duration" name="duration"
+              class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">
+        {% for minutes, name in DURATIONS %}
+          <option value="{{ minutes }}" {{ 'selected' if (form.get('duration') or '60')|string == minutes|string }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+
+      <!-- 시작 시각 + 소요 시간으로 끝나는 시각을 계산해 노선별로 끝난 뒤 탈 수 있는 가장 빠른 셔틀을 바로 알려줘요 -->
+      <div class="mt-3 rounded-2xl bg-slate-50 p-4">
+        <p id="time-range" class="text-sm font-extrabold text-violet-700 mb-2"></p>
+        <p id="shuttle-end" class="text-xs font-extrabold text-slate-500 mb-2">🚌 셔틀 확인 중…</p>
+        <ul id="shuttle-hint" class="space-y-1.5"></ul>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="max_people">모집 인원 (방장 포함)</label>
+      <input id="max_people" name="max_people" type="number" min="2" max="50" required
+             value="{{ form.get('max_people', 4) }}"
+             class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="description">한마디 (선택)</label>
+      <textarea id="description" name="description" rows="3" maxlength="300"
+                placeholder="준비물, 실력 수준, 오픈채팅 링크 등을 적어 주세요"
+                class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold">{{ form.get('description', '') }}</textarea>
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-2" for="password">비밀번호 4자리 🔑</label>
+      <input id="password" name="password" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" required
+             placeholder="숫자 4자리"
+             class="w-full rounded-2xl bg-slate-50 border-2 border-transparent focus:border-violet-400 focus:bg-white outline-none px-4 py-3 font-semibold tracking-[0.5em]">
+      <p class="text-xs text-slate-400 mt-1 font-semibold">글 삭제·조기마감할 때 필요해요. 잊어버리면 복구할 수 없어요!</p>
+    </div>
+
+    <button class="w-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500 text-white font-extrabold py-4 text-lg shadow-lg shadow-pink-200 hover:scale-[1.02] active:scale-95 transition">
+      번개 올리기 ⚡
+    </button>
+  </form>
+</div>
+
+<script>
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function setIn(min) {
+    const d = new Date(Date.now() + min * 60000);
+    d.setSeconds(0, 0);
+    document.getElementById('meet_time').value =
+      d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    updateShuttle();
+  }
+
+  // 모임 시간·소요 시간이 바뀔 때마다 서버에서 노선별 셔틀 판정을 받아 보여 준다
+  var shuttleSeq = 0;
+  function updateShuttle() {
+    var meet = document.getElementById('meet_time').value;
+    var dur = document.getElementById('duration').value;
+    var endEl = document.getElementById('shuttle-end');
+    var list = document.getElementById('shuttle-hint');
+    var rangeEl = document.getElementById('time-range');
+    if (!meet) { rangeEl.textContent = ''; endEl.textContent = '🚌 모임 시간을 입력하면 셔틀을 알려줘요'; list.innerHTML = ''; return; }
+    var parts = meet.split('T');
+    var sel = document.getElementById('duration');
+    var durText = sel.options[sel.selectedIndex].text;
+    var seq = ++shuttleSeq;
+    fetch('/api/shuttle?date=' + encodeURIComponent(parts[0]) + '&time=' + encodeURIComponent(parts[1]) +
+          '&duration=' + encodeURIComponent(dur))
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        if (seq !== shuttleSeq) return;            // 늦게 도착한 옛 응답은 무시
+        rangeEl.textContent = '🕒 ' + parts[1] + ' 시작 + 소요 ' + durText + ' = ' + data.end + ' 종료';
+        endEl.textContent = '🚌 끝난 뒤 가장 빠른 셔틀 (끝나는 시각 ' + data.end + ' 기준)';
+        list.innerHTML = '';
+        data.routes.forEach(function (s) {
+          var li = document.createElement('li');
+          li.className = 'flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-bold ' + s.cls;
+          var a = document.createElement('span'); a.textContent = s.route;
+          var b = document.createElement('span'); b.className = 'text-xs text-right';
+          b.textContent = s.icon + ' ' + s.text;
+          li.appendChild(a); li.appendChild(b); list.appendChild(li);
+        });
+      })
+      .catch(function () {
+        if (seq !== shuttleSeq) return;
+        endEl.textContent = '🚌 셔틀 정보를 불러오지 못했어요 (글은 그대로 올릴 수 있어요)';
+        list.innerHTML = '';
+      });
+  }
+  document.getElementById('meet_time').addEventListener('input', updateShuttle);
+  document.getElementById('meet_time').addEventListener('change', updateShuttle);
+  document.getElementById('duration').addEventListener('change', updateShuttle);
+  updateShuttle();
+</script>
+{% endblock %}
+
+{% block scripts %}
+<!-- libraries=services: Places(장소 검색) + Geocoder(주소→좌표) 사용 / autoload=false: kakao.maps.load()로 직접 로드 -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={{ KAKAO_JS_KEY }}&libraries=services&autoload=false"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var statusEl = $('map-status'), resultsEl = $('map-results');
+  var DEFAULT_CENTER = [37.5665, 126.9780]; // 서울시청 (검색 전 기본 위치)
+  var map, marker, geocoder, places;
+
+  function setStatus(msg, type) {
+    statusEl.textContent = msg;
+    statusEl.className = 'mt-2 text-xs font-semibold ' +
+      (type === 'error' ? 'text-rose-500' : type === 'ok' ? 'text-emerald-600' : 'text-slate-400');
+  }
+
+  // 지도를 못 불러왔을 때 원인을 화면에 알려 준다 (글 등록은 지도 없이도 가능)
+  function showLoadError(blocked) {
+    if (blocked) {
+      setStatus('카카오 지도 스크립트를 불러오지 못했어요. 인터넷 연결이나 광고 차단 프로그램을 확인해 주세요. (지도 없이도 글은 올릴 수 있어요)', 'error');
+    } else {
+      setStatus('지도를 불러오지 못했어요. 카카오 개발자 콘솔에서 ① 플랫폼 키 → JavaScript 키 → JavaScript SDK 도메인에 ' +
+        location.origin + ' 이(가) 등록돼 있는지, ② 제품 설정 → 카카오맵 사용 설정이 ON인지 확인해 주세요. (지도 없이도 글은 올릴 수 있어요)', 'error');
+    }
+  }
+
+  // 좌표/주소를 hidden input에 넣고 지도에 핀을 찍는다
+  function pick(lat, lng, address, name) {
+    var pos = new kakao.maps.LatLng(lat, lng);
+    marker.setPosition(pos);
+    marker.setMap(map);
+    map.setCenter(pos);
+    map.setLevel(3);
+
+    $('lat').value = lat;
+    $('lng').value = lng;
+    $('address').value = address || '';
+
+    // 장소 입력창: 선택한 장소명(없으면 주소)으로 채움 (서버 제한 40자)
+    var label = (name || address || '').slice(0, 40);
+    if (label && (name || !$('location').value.trim())) $('location').value = label;
+
+    setStatus('📌 ' + (address || label) + ' — 이 위치가 저장돼요', 'ok');
+  }
+
+  function renderResults(items) {
+    resultsEl.innerHTML = '';
+    if (items.length < 2) { resultsEl.classList.add('hidden'); return; }
+    items.forEach(function (it) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'w-full text-left rounded-xl bg-violet-50 hover:bg-violet-100 px-3 py-2 transition';
+      var t = document.createElement('div');
+      t.className = 'text-sm font-bold text-violet-700';
+      t.textContent = it.name;
+      var a = document.createElement('div');
+      a.className = 'text-xs text-slate-500';
+      a.textContent = it.address;
+      b.appendChild(t); b.appendChild(a);
+      b.addEventListener('click', function () { pick(it.lat, it.lng, it.address, it.name); });
+      li.appendChild(b);
+      resultsEl.appendChild(li);
+    });
+    resultsEl.classList.remove('hidden');
+  }
+
+  function search() {
+    var q = $('location').value.trim();
+    if (!q) { setStatus('장소명이나 주소를 먼저 입력해 주세요.', 'error'); $('location').focus(); return; }
+    if (!places) { showLoadError(!(window.kakao && kakao.maps)); return; }  // 지도가 아직/끝내 안 뜬 경우
+    setStatus('검색 중…');
+    var S = kakao.maps.services.Status;
+
+    // 1) 장소명 검색(예: "한국대학교 학생회관") → 2) 결과가 없으면 주소 검색(Geocoder)
+    places.keywordSearch(q, function (data, st) {
+      if (st === S.OK && data.length) {
+        var items = data.slice(0, 5).map(function (d) {
+          return { name: d.place_name, address: d.road_address_name || d.address_name,
+                   lat: parseFloat(d.y), lng: parseFloat(d.x) };
+        });
+        renderResults(items);
+        pick(items[0].lat, items[0].lng, items[0].address, items[0].name);
+        if (items.length > 1) setStatus('📌 ' + items[0].address + ' — 다른 후보를 눌러 바꿀 수 있어요', 'ok');
+        return;
+      }
+      geocoder.addressSearch(q, function (res, st2) {
+        if (st2 === S.OK && res.length) {
+          var r = res[0];
+          var addr = (r.road_address && r.road_address.address_name) || r.address_name;
+          renderResults([]);
+          pick(parseFloat(r.y), parseFloat(r.x), addr, null);
+        } else {
+          renderResults([]);
+          setStatus('검색 결과가 없어요. 학교 이름이나 건물명을 더 구체적으로 입력해 보세요.', 'error');
+        }
+      });
+    });
+  }
+
+  function init() {
+    var lat0 = parseFloat($('lat').value), lng0 = parseFloat($('lng').value);
+    var hasSaved = !isNaN(lat0) && !isNaN(lng0);
+    var center = hasSaved ? [lat0, lng0] : DEFAULT_CENTER;
+
+    map = new kakao.maps.Map($('map'), {
+      center: new kakao.maps.LatLng(center[0], center[1]),
+      level: hasSaved ? 3 : 5
+    });
+    marker = new kakao.maps.Marker({ position: map.getCenter() });
+    if (hasSaved) marker.setMap(map);           // 폼 오류로 다시 열렸을 때 핀 복원
+    geocoder = new kakao.maps.services.Geocoder();
+    places = new kakao.maps.services.Places();
+
+    // 지도를 직접 클릭하면 그 자리로 핀 이동 + 좌표→주소 변환
+    kakao.maps.event.addListener(map, 'click', function (e) {
+      var ll = e.latLng;
+      geocoder.coord2Address(ll.getLng(), ll.getLat(), function (res, st) {
+        var addr = '';
+        if (st === kakao.maps.services.Status.OK && res.length) {
+          addr = (res[0].road_address && res[0].road_address.address_name) ||
+                 (res[0].address && res[0].address.address_name) || '';
+        }
+        renderResults([]);
+        pick(ll.getLat(), ll.getLng(), addr, null);
+      });
+    });
+  }
+
+  $('btn-search').addEventListener('click', search);
+  $('location').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); search(); }   // 엔터 = 위치 찾기 (글 등록 방지)
+  });
+
+  if (window.kakao && kakao.maps) {
+    var loaded = false;
+    // 4초 안에 지도 라이브러리가 안 오면 원인을 안내 (도메인 미등록·카카오맵 사용 설정 OFF일 때 이 경우가 됨)
+    setTimeout(function () { if (!loaded) showLoadError(false); }, 4000);
+    kakao.maps.load(function () { loaded = true; init(); });
+  } else {
+    showLoadError(true);
+  }
+})();
+</script>
+{% endblock %}
