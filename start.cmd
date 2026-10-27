@@ -1,8 +1,18 @@
 @echo off
 setlocal
+rem 이 파일이 있는 폴더(프로젝트 폴더)로 먼저 이동한다. 한글 경로도 문제없도록 글자 설정보다 먼저 한다
+pushd "%~dp0"
 chcp 65001 >nul
 rem 레시피 믹스 실행 파일 - 더블클릭하면 서버를 켜고 브라우저를 연다. 끄려면 이 창에서 Ctrl+C
-pushd "%~dp0"
+
+rem 0) 프로젝트 폴더 안에서 실행됐는지 확인
+if not exist "requirements.txt" (
+  echo [오류] 프로젝트 폴더에서 실행되지 않았어요.
+  echo        지금 위치: %cd%
+  echo        start.cmd 는 run.py, requirements.txt 와 같은 폴더에 있어야 해요.
+  echo        바탕화면에서 쓰려면 파일을 옮기지 말고 '바로 가기'를 만들어 주세요.
+  goto :fail
+)
 
 rem 1) 파이썬 확인
 where python >nul 2>&1
