@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="60">{% endblock %}
+
+{% block content %}
+{% set open_count = posts | selectattr('status', 'equalto', 'open') | list | length %}
+{% set closed_count = posts | selectattr('status', 'equalto', 'closed') | list | length %}
+
+<section class="relative overflow-hidden mb-6 rounded-3xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white p-6 sm:p-8 shadow-xl shadow-violet-200">
+  <div class="absolute -right-6 -top-6 text-[8rem] opacity-20 select-none">⚡</div>
+  <p class="text-sm font-bold opacity-90">LIVE · 지금 캠퍼스에서</p>
+  <h1 class="text-2xl sm:text-3xl font-extrabold mt-1">오늘 뭐 해? 지금 바로 모이자 🏃‍♂️</h1>
+  <p class="mt-2 font-semibold">
+    <span class="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
+      <span class="relative flex h-2.5 w-2.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-300 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-300"></span>
+      </span>
+      모집 중인 번개 {{ open_count }}개
+    </span>
+  </p>
+</section>
+
+<nav class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 mb-3">
+  {% for tab in TABS %}
+    {% set active = (tab == category) %}
+    <a href="{{ url_for('index', category=tab, open='1' if only_open else None, route=route or None, last='1' if last_only else None) }}"
+       class="shrink-0 rounded-full px-4 py-2 text-sm font-bold transition
+         {{ 'bg-slate-800 text-white shadow-lg' if active else 'bg-white text-slate-600 hover:bg-violet-100 shadow-sm' }}">
+      {% if tab != '전체' %}{{ CAT_META[tab].emoji }} {% endif %}{{ tab }}
+    </a>
+  {% endfor %}
+</nav>
+
+<form method="get" class="mb-6 flex flex-wrap items-center gap-2">
+  <input type="hidden" name="category" value="{{ category }}">
+
+  <label class="inline-flex items-center gap-2 cursor-pointer select-none bg-white rounded-full px-4 py-2 shadow-sm font-bold text-sm text-slate-600">
+    <input type="checkbox" name="open" value="1" {{ 'checked' if only_open }}
+           onchange="this.form.submit()"
+           class="w-4 h-4 rounded accent-violet-500">
+    모집 중인 글만 보기
+  </label>
+
+  <!-- 내가 타는 셔틀 노선: 고르면 카드마다 '끝난 뒤 가장 빠른 셔틀'이 붙고, 아래 체크박스를 쓸 수 있어요 -->
+  <div class="inline-flex items-center gap-2 bg-white rounded-full pl-4 pr-3 py-2 shadow-sm">
+    <label for="route" class="text-sm font-bold text-slate-600">🚌 내 셔틀</label>
+    <select id="route" name="route" onchange="this.form.submit()"
+            class="bg-transparent text-sm font-extrabold text-violet-600 outline-none cursor-pointer">
+      <option value="">선택 안 함</option>
+      {% for r in ROUTES %}
+        <option value="{{ r }}" {{ 'selected' if r == route }}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <label class="inline-flex items-center gap-2 select-none bg-white rounded-full px-4 py-2 shadow-sm font-bold text-sm
+                {{ 'cursor-pointer text-slate-600' if route else 'cursor-not-allowed text-slate-400 opacity-60' }}"
+         {% if not route %}title="먼저 내 셔틀 노선을 골라 주세요"{% endif %}>
+    <input type="checkbox" name="last" value="1" {{ 'checked' if last_only }} {{ '' if route else 'disabled' }}
+           onchange="this.form.submit()"
+           class="w-4 h-4 rounded accent-emerald-500">
+    셔틀 탈 수 있는 번개만 보기
+  </label>
+</form>
+{% if last_only %}
+  <p class="-mt-3 mb-5 ml-1 text-xs font-semibold text-slate-400">
+    {{ route }} 셔틀이 모임 종료 후 {{ SHUTTLE_BUFFER }}분 이상 여유를 두고 출발하는 번개만 보여요. 주말·공휴일처럼 셔틀이 없는 날은 제외돼요.
+  </p>
+{% endif %}
+
+{% if posts %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {% for p in posts %}
+  <a href="{{ url_for('detail', post_id=p.id) }}"
+     class="group relative block rounded-3xl bg-white p-5 shadow-md hover:shadow-xl hover:-translate-y-1 transition
+            {{ 'opacity-60 grayscale-[40%]' if p.status == 'closed' }}
+            {{ 'ring-2 ring-orange-400' if p.urgent }}">
+
+    {% if p.urgent %}
+      <span class="absolute -top-3 right-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-xs font-extrabold px-3 py-1 shadow-lg animate-bounce">
+        🔥 곧 시작!
+      </span>
+    {% endif %}
+
+    <div class="flex items-center justify-between">
+      <span class="rounded-full px-3 py-1 text-xs font-bold {{ p.cat.cls }}">{{ p.cat.emoji }} {{ p.category }}</span>
+      <span class="rounded-full px-3 py-1 text-xs font-bold {{ p.badge_cls }}">{{ p.status_label }}</span>
+    </div>
+
+    <h2 class="mt-3 text-lg font-extrabold leading-snug line-clamp-2 group-hover:text-violet-600">{{ p.title }}</h2>
+
+    <div class="mt-3 rounded-2xl px-4 py-3 flex items-center justify-between
+      {% if p.status == 'closed' %}bg-slate-100 text-slate-500
+      {% elif p.urgent %}bg-gradient-to-r from-orange-400 to-rose-500 text-white animate-pulse
+      {% else %}bg-gradient-to-r from-violet-100 to-pink-100 text-violet-700{% endif %}">
+      <div>
+        <div class="text-xl font-extrabold leading-tight">🕒 {{ p.time_label }}</div>
+        <div class="text-xs font-semibold opacity-80">{{ p.end_label }} 종료 · {{ p.duration_label }}</div>
+      </div>
+      <span class="text-sm font-bold">{{ p.remaining }}</span>
+    </div>
+
+    {% if p.shuttle %}
+      <p class="mt-2 rounded-xl px-3 py-1.5 text-xs font-bold {{ p.shuttle.cls }}">
+        🚌 {{ p.shuttle.route }} · {{ p.shuttle.icon }} {{ p.shuttle.text }}
+      </p>
+    {% endif %}
+
+    <p class="mt-3 text-sm text-slate-500 font-semibold truncate">📍 {{ p.location }}</p>
+
+    <div class="mt-4">
+      <div class="flex justify-between text-xs font-bold text-slate-500 mb-1">
+        <span>👥 {{ p.current_people }} / {{ p.max_people }}명</span>
+        <span>{{ p.percent }}%</span>
+      </div>
+      <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+        <div class="h-full rounded-full {{ 'bg-violet-500' if p.status == 'full' else 'bg-gradient-to-r from-emerald-400 to-lime-400' }}"
+             style="width: {{ p.percent }}%"></div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% if closed_limit and not only_open and closed_count >= closed_limit %}
+  <p class="mt-6 text-center text-xs font-semibold text-slate-400">지난 모임은 최근 {{ closed_limit }}개만 보여요.</p>
+{% endif %}
+{% else %}
+<div class="text-center bg-white/80 rounded-3xl py-16 shadow-sm">
+  <div class="text-5xl">🫥</div>
+  {% if last_only %}
+    <p class="mt-3 font-bold text-slate-600">{{ route }} 셔틀을 탈 수 있는 번개가 아직 없어요</p>
+    <p class="mt-1 text-sm font-semibold text-slate-400">필터를 끄거나, 끝나는 시간을 셔틀 시간에 맞춰 직접 만들어 보세요.</p>
+  {% else %}
+    <p class="mt-3 font-bold text-slate-600">아직 열린 번개가 없어요</p>
+  {% endif %}
+  <a href="{{ url_for('new_post') }}" class="inline-block mt-4 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 text-white font-bold px-6 py-3 shadow-lg">{{ '번개 만들기 ⚡' if last_only else '첫 번개 만들기 ⚡' }}</a>
+</div>
+{% endif %}
+{% endblock %}
