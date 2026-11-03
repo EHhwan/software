@@ -24,14 +24,28 @@ class AIUnavailable(Exception):
     화면에서는 이 예외를 잡아 안내 문구를 보여 준다."""
 
 
+def _use_system_certificates():
+    """파이썬이 자체 인증서 목록 대신 운영체제(윈도우·맥)에 등록된 인증서를 믿게 한다.
+    학교 네트워크의 보안 인증서처럼 브라우저는 믿는 인증서를 파이썬도 믿게 되어 'unable to get local issuer
+    certificate' 오류가 사라진다. truststore 가 없으면 기존 방식 그대로 둔다."""
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+
+
 def _get_model():
     global _model
     if _model is None:
         key = os.environ.get("GEMINI_API_KEY", "").strip()
         if not key:
             raise AIUnavailable("GEMINI_API_KEY 가 설정되지 않았어요. .env 파일을 확인해 주세요.")
+        _use_system_certificates()
         import google.generativeai as genai
-        genai.configure(api_key=key)
+        # 기본 통신 방식(gRPC)은 윈도우에 등록된 인증서를 보지 않아, 학교·회사처럼 통신을 검사하는 네트워크에서
+        # CERTIFICATE_VERIFY_FAILED 로 막힌다. 일반 웹 방식(REST)은 아래에서 켠 시스템 인증서를 그대로 쓴다.
+        genai.configure(api_key=key, transport=os.environ.get("GEMINI_TRANSPORT", "rest"))
         _model = genai.GenerativeModel(os.environ.get("GEMINI_MODEL", DEFAULT_MODEL))
     return _model
 

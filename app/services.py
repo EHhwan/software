@@ -128,6 +128,8 @@ def ai_error_message(err):
     text = str(err).lower()
     if "429" in text or "quota" in text or "exhausted" in text or "rate limit" in text:
         return "AI 사용량 한도에 걸렸어요. 잠시 뒤 다시 시도해 주세요."
+    if "certificate" in text or "ssl" in text:
+        return "네트워크의 보안 인증서 문제로 AI에 연결하지 못했어요. 학교·회사 네트워크라면 다른 네트워크(휴대폰 핫스팟 등)에서 시도해 주세요."
     if "api_key" in text or "api key" in text:
         return "AI 연결 설정(API 키)에 문제가 있어요. 관리자에게 알려 주세요."
     if "json" in text or "형식" in text or "없어요" in text or "비었" in text:
