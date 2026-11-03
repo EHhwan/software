@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import ingredient_table with context %}
+{% set is_mix = d.kind == 'ai_mix' %}
+{% block title %}{{ data.title }} · AI 결과 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="rm-crumb">
+  {% if is_mix %}<a href="{{ url_for('mix.index') }}">AI 레시피 믹스</a>{% else %}<a href="{{ url_for('pantry.index') }}">보유 재료 추천</a>{% endif %} / 결과 미리보기
+</div>
+
+<div class="rm-panel">
+  <span class="rm-badge rm-badge-ai">{{ 'AI 조합' if is_mix else 'AI 재료 맞춤' }} · 저장 전 미리보기</span>
+  <h1 class="mt-3">{{ data.title }}</h1>
+  {% if data.summary %}<p class="rm-muted mt-2">{{ data.summary }}</p>{% endif %}
+  <div class="rm-meta-line mt-3">
+    <span class="rm-meta-item"><span><b>{{ data.servings }}</b>인분</span></span>
+    <span class="rm-meta-item"><span><span class="rm-sr-only">예상 조리 시간 </span>약 <b>{{ data.cook_time_min }}</b>분</span></span>
+  </div>
+  <div class="rm-form-notice mt-3">AI가 만든 결과는 실제 조리 결과를 보장하지 않아요. 재료 분량과 순서를 검토한 뒤 저장하세요.{% if data.notes %} <strong>확인할 점:</strong> {{ data.notes }}{% endif %}</div>
+
+  {% set changed = (data.changes or [])|rejectattr('type', 'equalto', 'keep')|list %}
+  {% if is_mix and changed %}
+  <div class="rm-compare-link">
+    <h3>달라진 점 {{ changed|length }}건</h3>
+    <p class="rm-small rm-muted mt-1">{% for c in changed[:5] %}{{ c.item }} {{ CHANGE_TYPES[c.type] }}{{ ' · ' if not loop.last }}{% endfor %}{{ ' …' if changed|length > 5 }}</p>
+    <a class="rm-btn mt-3" href="{{ url_for('mix.draft_compare', draft_id=d.id) }}">원본과 비교</a>
+  </div>
+  {% endif %}
+
+  {% if not is_mix %}
+    {% if data.reason %}<p class="mt-4"><strong>추천 이유</strong> {{ data.reason }}</p>{% endif %}
+    <div class="rm-two mt-3">
+      <div>
+        <h3>대체 제안</h3>
+        {% if data.substitutions %}
+        <table class="rm-table mt-2"><tbody>
+          {% for s in data.substitutions %}<tr><th>{{ s.missing }} → {{ s.substitute or '대체 불가' }}</th><td>{{ s.how }}</td></tr>{% endfor %}
+        </tbody></table>
+        {% else %}<p class="rm-small rm-muted mt-2">대체할 재료가 없어요.</p>{% endif %}
+      </div>
+      <div>
+        <h3>추가로 필요한 재료</h3>
+        {% if data.still_needed %}{{ ingredient_table(data.still_needed) }}{% else %}<p class="rm-small rm-muted mt-2">가진 재료로 만들 수 있어요.</p>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="rm-two mt-4">
+    <div><h3 class="mb-2">재료 · {{ data.servings }}인분</h3>{{ ingredient_table(data.ingredients) }}</div>
+    <div><h3 class="mb-2">조리 순서</h3><ol class="rm-steps">{% for s in data.steps %}<li>{{ s }}</li>{% endfor %}</ol></div>
+  </div>
+
+  <div class="rm-subtle mt-4">
+    원본 출처: {% for s in sources %}{{ s.title }} · {{ s.author }}{{ ' / ' if not loop.last }}{% endfor %}
+    {% if d.goal %}<br>요청: {{ d.goal }}{% endif %}
+  </div>
+
+  <div class="rm-end-row">
+    {% if d.saved_recipe_id %}
+      <a class="rm-btn" href="{{ url_for('recipes.detail', recipe_id=d.saved_recipe_id) }}">저장한 레시피 보기</a>
+    {% else %}
+      {% if is_mix %}
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('mix.index', own=sources[0].id, other=sources[1].id, servings=data.servings, goal=d.goal) }}">조건 바꿔 다시 조합</a>
+      {% else %}
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('pantry.index', have=d.goal.replace('보유 재료: ', '').split(', ')) }}">다른 후보 보기</a>
+      {% endif %}
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('recipes.new', draft=d.id) }}">수정 후 저장</a>
+      <form method="post" action="{{ url_for('mix.draft_save', draft_id=d.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="rm-btn">내 레시피로 저장</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

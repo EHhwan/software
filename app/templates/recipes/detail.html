@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_macros.html" import meta, stepper, ingredient_table, bookmark_button with context %}
+{% block title %}{{ r.title }} · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+{% set info = r.ai_info %}
+<div class="rm-crumb"><a href="{{ url_for('main.index') }}">레시피 둘러보기</a> / 레시피 상세</div>
+<div class="rm-detail-layout">
+  <article class="rm-detail-content">
+    <div class="rm-detail-head">
+      <span class="rm-badge {{ 'rm-badge-ai' if r.is_ai else 'rm-badge-neutral' }}">{{ r.origin_label }} · {{ r.category }}</span>
+      <h1>{{ r.title }}</h1>
+      {% if r.description %}<p>{{ r.description }}</p>{% endif %}
+      <div class="rm-meta-line mt-3">
+        <span class="rm-meta-author">{{ r.author.nickname }}</span>{{ meta(r, like_count, liked) }}<span>{{ '공개' if r.is_public else '나만 보기' }}</span>
+      </div>
+    </div>
+
+    {% if r.is_ai %}
+    <div class="rm-form-notice mt-4">AI가 만든 레시피예요. 실제 조리 결과를 보장하지 않으니 재료 분량과 순서를 검토한 뒤 만들어 주세요.</div>
+    {% endif %}
+
+    <div class="rm-section-head">
+      <h2 id="servings-label">재료</h2>
+      {{ stepper('detail-servings', r.servings, min=1, max=20, label_id='servings-label') }}
+    </div>
+    <p class="rm-small rm-muted mb-3">인분을 바꾸면 재료량을 다시 계산해요. 달걀처럼 개수로 세는 재료는 ‘4~5개’처럼 범위로, ‘약간’ 같은 표현은 그대로 보여 줘요.</p>
+    {{ ingredient_table(r.ingredients, check=True, id='detail-ingredients') }}
+
+    <h2>조리 순서</h2>
+    <ol class="rm-steps">{% for s in r.steps %}<li>{{ s.content }}</li>{% endfor %}</ol>
+
+    {% if r.is_ai %}
+    <div class="rm-sources">
+      <h3>원본 출처</h3>
+      <ul>
+        {% for s in r.sources %}
+          <li>{% if s.source_recipe and (s.source_recipe.is_public or s.source_recipe.author_id == current_user.id) %}<a href="{{ url_for('recipes.detail', recipe_id=s.source_recipe_id) }}">{{ s.source_title }}</a>{% else %}{{ s.source_title }}{% if not s.source_recipe %} <span class="rm-muted rm-small">(삭제된 레시피)</span>{% endif %}{% endif %} · {{ s.source_author }}</li>
+        {% endfor %}
+      </ul>
+      {% if info.goal %}<p class="rm-small rm-muted mt-2">요청: {{ info.goal }}</p>{% endif %}
+      {% if info.reason %}<p class="rm-small mt-2"><strong>추천 이유</strong> {{ info.reason }}</p>{% endif %}
+    </div>
+    {% if info.changes %}
+    <div class="rm-compare-link">
+      <h3>원본에서 무엇을 바꿨나요?</h3>
+      <p class="rm-small rm-muted mt-1">추가·제외·분량·순서를 전후 값과 이유로 확인하세요. ({{ info.changes|rejectattr('type', 'equalto', 'keep')|list|length }}건)</p>
+      <a href="{{ url_for('recipes.compare', recipe_id=r.id) }}" class="rm-btn rm-btn-secondary mt-3">원본과 비교</a>
+    </div>
+    {% endif %}
+    {% if info.substitutions %}
+    <h2>대체한 재료</h2>
+    <table class="rm-table"><tbody>
+      {% for s in info.substitutions %}<tr><th>{{ s.missing }} → {{ s.substitute or '대체 불가' }}</th><td>{{ s.how }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% endif %}
+    {% endif %}
+  </article>
+
+  <aside class="rm-panel rm-summary align-self-start">
+    <h2>레시피 활용</h2>
+    <p class="rm-small rm-muted mt-2">{{ '내 레시피에 다른 사람의 아이디어를 더해 보세요.' if is_owner else '내 레시피와 조합해 새로운 요리로 만들어 보세요.' }}</p>
+    <div class="rm-detail-actions mt-3">
+      <a class="rm-btn" href="{{ url_for('mix.index', own=r.id) if is_owner else url_for('mix.index', other=r.id) }}">{{ '이 레시피로 조합 시작' if is_owner else '이 레시피와 조합' }}</a>
+      {{ bookmark_button(r, marked, cls='rm-btn rm-btn-secondary') }}
+      {% if current_user.is_authenticated %}
+      <form method="post" action="{{ url_for('recipes.like', recipe_id=r.id) }}" data-ajax-toggle="like">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="rm-btn rm-btn-secondary" aria-pressed="{{ 'true' if liked else 'false' }}"><span data-like-icon>{{ '♥' if liked else '♡' }}</span> 좋아요 <span data-like-count>{{ like_count }}</span></button>
+      </form>
+      {% else %}
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('auth.login', next=request.full_path) }}">♡ 좋아요 {{ like_count }}</a>
+      {% endif %}
+      <button type="button" class="rm-btn rm-btn-secondary" data-cook>조리 시작</button>
+      <button type="button" class="rm-btn rm-btn-quiet" data-copy-recipe>텍스트로 복사</button>
+      <a class="rm-btn rm-btn-quiet" href="{{ url_for('main.index') }}">목록으로</a>
+    </div>
+    {% if is_owner %}
+    <div class="rm-visibility">
+      <span>{{ '커뮤니티 공개' if r.is_public else '나만 보기' }}</span>
+      <form method="post" action="{{ url_for('recipes.visibility', recipe_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="rm-btn rm-btn-secondary rm-btn-sm">{{ '비공개로 전환' if r.is_public else '공개하기' }}</button>
+      </form>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('recipes.edit', recipe_id=r.id) }}">수정</a>
+      <form method="post" action="{{ url_for('recipes.delete', recipe_id=r.id) }}" data-confirm="‘{{ r.title }}’ 레시피를 삭제할까요? 되돌릴 수 없어요.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="rm-btn rm-btn-danger">삭제</button>
+      </form>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+
+<dialog class="rm-dialog" id="cook-dialog" aria-labelledby="cook-title">
+  <h2 id="cook-title">조리 모드</h2>
+  <p class="rm-small rm-muted">{{ r.title }}</p>
+  <div class="rm-cook-step" id="cook-step" aria-live="polite"></div>
+  <div class="d-flex justify-content-between gap-2 mt-3">
+    <button type="button" class="rm-btn rm-btn-secondary" id="cook-prev">이전 단계</button>
+    <button type="button" class="rm-btn" id="cook-next">다음 단계</button>
+  </div>
+  <div class="rm-end-row"><button type="button" class="rm-btn rm-btn-quiet" data-close>닫기</button></div>
+</dialog>
+
+<script type="application/json" id="recipe-data">{{ {
+  "title": r.title, "servings": r.servings, "cook_time_min": r.cook_time_min, "author": r.author.nickname,
+  "steps": r.steps|map(attribute='content')|list,
+  "ingredients": r.ingredients|map(attribute='name')|list
+}|tojson }}</script>
+{% endblock %}

@@ -1,67 +1,103 @@
-{# 입력 칸 + 오류 메시지를 그려 주는 도우미. 비밀번호 칸에는 [보기] 버튼이 붙는다. #}
+{# ---------- 아이콘 (같은 굵기의 단색 선 그림) ---------- #}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'people' %}<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>
+{%- elif name == 'clock' %}<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>
+{%- elif name == 'heart' %}<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{# 인분 · 시간 · 좋아요: 진한 숫자 + 연한 단위 #}
+{% macro meta(r, like_count, liked=False) -%}
+<span class="rm-meta-item">{{ icon('people') }}<span><b>{{ r.servings }}</b>인분</span></span>
+<span class="rm-meta-item">{{ icon('clock') }}<span><span class="rm-sr-only">조리 시간 </span><b>{{ r.cook_time_min }}</b>분</span></span>
+<span class="rm-meta-item{{ ' liked' if liked }}">{{ icon('heart') }}<span><span class="rm-sr-only">좋아요 </span><b data-like-count>{{ like_count }}</b></span></span>
+{%- endmacro %}
+
+{# 즐겨찾기 별 버튼 (로그인하지 않았으면 로그인 화면으로) #}
+{% macro bookmark_button(r, marked, cls='rm-card-bookmark') -%}
+{% if current_user.is_authenticated %}
+<form method="post" action="{{ url_for('recipes.bookmark', recipe_id=r.id) }}" data-ajax-toggle="bookmark" class="d-contents" style="display:contents">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ request.full_path }}">
+  <button class="{{ cls }}" aria-pressed="{{ 'true' if marked else 'false' }}" aria-label="{{ r.title }} 즐겨찾기{{ ' 해제' if marked }}">{% if cls == 'rm-card-bookmark' %}{{ '★' if marked else '☆' }}{% else %}{{ '★ 즐겨찾기 해제' if marked else '☆ 즐겨찾기' }}{% endif %}</button>
+</form>
+{% else %}
+<a class="{{ cls }} d-inline-grid" style="place-items:center" href="{{ url_for('auth.login', next=request.full_path) }}" aria-label="로그인하고 즐겨찾기">{{ '☆' if cls == 'rm-card-bookmark' else '☆ 즐겨찾기' }}</a>
+{% endif %}
+{%- endmacro %}
+
+{# 레시피 카드 #}
+{% macro recipe_card(r, likes, liked, marked, show_visibility=False) %}
+<article class="rm-card">
+  <div class="rm-kind">
+    <span>{{ r.category }}</span>
+    <span class="d-flex gap-1">
+      {% if r.is_ai %}<span class="rm-badge rm-badge-ai">{{ r.origin_label }}</span>{% endif %}
+      {% if show_visibility and not r.is_public %}<span class="rm-badge rm-badge-neutral">나만 보기</span>{% endif %}
+    </span>
+  </div>
+  <h3><a href="{{ url_for('recipes.detail', recipe_id=r.id) }}">{{ r.title }}</a></h3>
+  {% if r.description %}<p class="rm-desc">{{ r.description }}</p>{% endif %}
+  <div class="rm-author">{{ r.author.nickname }}</div>
+  <div class="rm-meta">{{ meta(r, likes.get(r.id, 0), r.id in liked) }}{{ bookmark_button(r, r.id in marked) }}</div>
+</article>
+{% endmacro %}
+
+{% macro recipe_grid(recipes, likes, liked, marked, show_visibility=False) %}
+<div class="rm-grid">
+  {% for r in recipes %}{{ recipe_card(r, likes, liked, marked, show_visibility) }}{% endfor %}
+  {{ caller() if caller and not recipes }}
+</div>
+{% endmacro %}
+
+{# 비어 있을 때 #}
+{% macro empty(title, desc='', url=None, label=None) %}
+<div class="rm-empty">
+  <h3>{{ title }}</h3>
+  {% if desc %}<p>{{ desc }}</p>{% endif %}
+  {% if url %}<a class="rm-btn rm-btn-secondary mt-3" href="{{ url }}">{{ label }}</a>{% endif %}
+</div>
+{% endmacro %}
+
+{# [− 2인분 +] : name 을 주면 폼으로 값이 전송된다 #}
+{% macro stepper(id, value, min=1, max=10, label_id='', name='') %}
+<div class="rm-stepper" role="group" {% if label_id %}aria-labelledby="{{ label_id }}"{% endif %} data-stepper id="{{ id }}" data-min="{{ min }}" data-max="{{ max }}" data-value="{{ value }}">
+  <button type="button" data-step="-1" aria-label="1인분 줄이기" {{ 'disabled' if value <= min }}>−</button>
+  <output aria-live="polite">{{ value }}인분</output>
+  <button type="button" data-step="1" aria-label="1인분 늘리기" {{ 'disabled' if value >= max }}>+</button>
+  {% if name %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}
+</div>
+{% endmacro %}
+
+{# 입력 칸 + 오류 문구 (WTForms). 비밀번호 칸에는 [보기] 버튼 #}
 {% macro field(f, help='') %}
-<div class="mb-3">
+<div class="rm-field">
   {{ f.label(class="form-label") }}
   {% if f.type == 'PasswordField' %}
   <div class="rm-pw">
     {{ f(class="form-control" ~ (" is-invalid" if f.errors else ""), **kwargs) }}
-    <button type="button" class="rm-pw-toggle" data-pw-toggle="{{ f.id }}" aria-label="비밀번호 보기">보기</button>
-    {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+    <button type="button" class="rm-btn rm-btn-quiet rm-pw-toggle" data-pw-toggle="{{ f.id }}" aria-label="비밀번호 보기" aria-pressed="false">보기</button>
   </div>
   {% else %}
   {{ f(class="form-control" ~ (" is-invalid" if f.errors else ""), **kwargs) }}
-  {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
   {% endif %}
-  {% if help and not f.errors %}<div class="form-text">{{ help }}</div>{% endif %}{# 오류가 있으면 오류 문구만 #}
+  {% for e in f.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+  {% if help and not f.errors %}<div class="form-text">{{ help }}</div>{% endif %}
 </div>
 {% endmacro %}
 
-{# 비밀번호 [보기]/[숨기기] - 폼이 있는 페이지의 scripts 블록에서 불러온다 #}
-{% macro password_toggle_script() %}
-<script>
-  document.querySelectorAll('[data-pw-toggle]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var input = document.getElementById(btn.dataset.pwToggle);
-      var show = input.type === 'password';
-      input.type = show ? 'text' : 'password';
-      btn.textContent = show ? '숨기기' : '보기';
-      btn.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기');
-    });
-  });
-</script>
-{% endmacro %}
-
-{# 비어 있을 때 보여 줄 상자 #}
-{% macro empty_box(emoji, title, desc='') %}
-<div class="rm-empty">
-  <div class="rm-empty-emoji" aria-hidden="true">{{ emoji }}</div>
-  <p class="fw-bold mt-2 mb-1">{{ title }}</p>
-  {% if desc %}<p class="small text-muted-rm mb-0">{{ desc }}</p>{% endif %}
-  {{ caller() if caller }}
-</div>
-{% endmacro %}
-
-{# 레시피 카드 목록 (메인, 마이페이지 공용). 사진이 없으므로 레시피마다 색과 이모지를 정해 보여 준다. #}
-{% macro recipe_cards(recipes) %}
-{% set EMOJI = ['🍲', '🍝', '🥘', '🍛', '🥗', '🍜', '🥟', '🍳'] %}
-<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 g-md-4">
-  {% for r in recipes %}
-  <div class="col">
-    <article class="rm-card">
-      <div class="rm-thumb g{{ r.id % 4 }}" aria-hidden="true">{{ EMOJI[r.id % 8] }}</div>
-      <div class="p-3">
-        <h3 class="h6 fw-bold mb-1 d-flex align-items-center gap-2">
-          {% if r.is_ai %}<span class="rm-ai">AI</span>{% endif %}<span class="text-truncate">{{ r.title }}</span>
-        </h3>
-        <p class="small text-muted-rm mb-3 text-truncate">{{ r.description or '설명이 없어요' }}</p>
-        <div class="d-flex flex-wrap gap-1">
-          <span class="rm-pill">🍽️ {{ r.servings }}인분</span>
-          <span class="rm-pill">⏱️ {{ r.cook_time_min }}분</span>
-          <span class="rm-pill">👤 {{ r.author.nickname }}</span>
-        </div>
-      </div>
-    </article>
-  </div>
+{# 재료 표 (인분을 바꾸면 app.js 가 data-qty·data-unit 으로 다시 계산) #}
+{% macro ingredient_table(items, check=False, id='') %}
+<table class="rm-table" {% if id %}id="{{ id }}"{% endif %}>
+  <tbody>
+  {% for i in items %}
+    {% set q = i.quantity if i.quantity is defined else i['quantity'] %}
+    <tr>
+      <td>{% if check %}<label class="rm-checkline"><input type="checkbox" aria-label="{{ i.name }} 준비 완료"><span>{{ i.name }}</span></label>{% else %}{{ i.name }}{% endif %}</td>
+      <td class="rm-qty" data-qty="{{ '' if q is none else q }}" data-unit="{{ i.unit }}">{{ amount(i) }}</td>
+    </tr>
   {% endfor %}
-</div>
+  </tbody>
+</table>
 {% endmacro %}

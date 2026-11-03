@@ -1,64 +1,85 @@
 {% extends "base.html" %}
-{% from "_macros.html" import recipe_cards, empty_box %}
+{% from "_macros.html" import recipe_grid, empty with context %}
+{% block title %}레시피 둘러보기 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
-<section class="rm-hero mb-4 mb-md-5">
-  <span class="rm-float f1" aria-hidden="true">🍅</span>
-  <span class="rm-float f2" aria-hidden="true">🍳</span>
-  <span class="rm-float f3" aria-hidden="true">🧄</span>
-  <span class="rm-float f4" aria-hidden="true">🌶️</span>
-  <div class="rm-hero-content">
-    <span class="rm-ai mb-3">✨ Gemini AI</span>
-    <h1 class="mt-3 mb-3">두 레시피를 섞으면<br><span class="rm-mark">새로운 요리</span>가 돼요</h1>
-    <p class="text-muted-rm fs-6 mb-4">내 레시피와 다른 사람의 레시피를 골라 AI로 조합하고,<br class="d-none d-md-inline">
-      냉장고에 있는 재료로 만들 수 있는 요리를 추천받아요.</p>
-    {% if current_user.is_authenticated %}
-      <a class="btn btn-rm" href="{{ url_for('main.mypage') }}">내 레시피 보러 가기 →</a>
-    {% else %}
-      <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-rm" href="{{ url_for('auth.register') }}">무료로 시작하기 →</a>
-        <a class="btn btn-rm-outline" href="{{ url_for('auth.login') }}">로그인</a>
-      </div>
-    {% endif %}
-  </div>
-</section>
-
-<section class="row g-3 g-md-4 mb-5">
-  <div class="col-md-4">
-    <div class="rm-feature">
-      <div class="rm-icon t1">📖</div>
-      <h2 class="h6 fw-bold d-flex align-items-center gap-2">레시피 공유 <span class="rm-soon">곧 열려요</span></h2>
-      <p class="small text-muted-rm mb-0">재료와 순서만 적으면 끝. 사진 없이도 내 레시피를 올리고 좋아요를 받아요.</p>
+{% if not filtered and page.page == 1 %}
+<section class="rm-hero">
+  <div>
+    <div class="rm-eyebrow">레시피 믹스 · 매일의 요리</div>
+    <h1>익숙한 레시피에서,<br>새로운 한 끼로.</h1>
+    <p>내 요리에 다른 사람의 아이디어를 더해 보세요.<br>두 레시피의 재료와 조리법을 함께 살펴 새로운 조합을 제안합니다.</p>
+    <div class="rm-actions">
+      <a class="rm-btn" href="{{ url_for('mix.index') }}">레시피 조합하기 <span aria-hidden="true">↗</span></a>
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('pantry.index') }}">보유 재료로 찾기</a>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="rm-feature">
-      <div class="rm-icon t2">✨</div>
-      <h2 class="h6 fw-bold d-flex align-items-center gap-2">AI 레시피 믹스 <span class="rm-soon">곧 열려요</span></h2>
-      <p class="small text-muted-rm mb-0">두 레시피의 재료·양념·순서를 AI가 분석해 어울리는 새 레시피와 바뀐 이유를 알려 줘요.</p>
+  <div class="rm-sample-board" aria-label="믹스 예시">
+    <div class="rm-eyebrow">믹스 예시</div>
+    <div class="rm-pair">
+      <div class="rm-note"><div class="rm-small rm-muted">내 레시피</div><h3>김치볶음밥</h3><div class="rm-small rm-muted mt-1">김치 · 밥 · 대파</div></div>
+      <span aria-hidden="true">＋</span>
+      <div class="rm-note"><div class="rm-small rm-muted">다른 사람의 레시피</div><h3>버섯 크림 리소토</h3><div class="rm-small rm-muted mt-1">버섯 · 우유 · 치즈</div></div>
     </div>
-  </div>
-  <div class="col-md-4">
-    <div class="rm-feature">
-      <div class="rm-icon t3">🧺</div>
-      <h2 class="h6 fw-bold d-flex align-items-center gap-2">재료로 추천 <span class="rm-soon">곧 열려요</span></h2>
-      <p class="small text-muted-rm mb-0">가진 재료를 적으면 만들 수 있는 요리와 부족한 재료의 대체품까지 제안해요.</p>
-    </div>
+    <div class="rm-result-note"><span class="rm-badge rm-badge-ai">AI 조합</span><h3 class="mt-2">버섯 크림 김치볶음밥</h3><p class="rm-small mt-1">김치의 산미에 크림의 부드러움을 더한 조합</p></div>
   </div>
 </section>
+{% endif %}
 
-<section class="mb-5">
-  <h2 class="rm-section-title"><span class="rm-chip">🔥</span>인기 레시피</h2>
-  {# TODO(3차): 좋아요 수 기준 정렬 (AI 사용 안 함) #}
-  {{ empty_box("🏆", "인기 순위를 준비하고 있어요", "좋아요 기능이 열리면 가장 사랑받는 레시피를 보여 드려요.") }}
-</section>
+<div class="rm-section-top">
+  <h2>레시피 둘러보기</h2>
+  <form class="rm-searchbar" method="get" action="{{ url_for('main.index') }}" role="search">
+    {% for key in ('category', 'time', 'origin', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+    <input class="form-control" type="search" name="q" value="{{ filters.q }}" maxlength="40" aria-label="레시피 검색" placeholder="요리 이름이나 재료로 검색">
+    <button class="rm-btn rm-btn-secondary">검색</button>
+  </form>
+  <a href="{{ url_for('recipes.new') }}" class="rm-btn">레시피 등록</a>
+</div>
 
-<section>
-  <h2 class="rm-section-title"><span class="rm-chip">🆕</span>최신 레시피</h2>
-  {% if latest %}
-    {{ recipe_cards(latest) }}
+<div class="rm-filter-toolbar">
+  <div class="rm-category-list" aria-label="요리 종류">
+    {% for c in ['전체'] + categories %}
+      <a class="rm-pill-btn" href="{{ url_with(category=c) }}" aria-pressed="{{ 'true' if filters.category == c else 'false' }}">{{ c }}</a>
+    {% endfor %}
+  </div>
+  <form class="rm-filter-selects" method="get" action="{{ url_for('main.index') }}" data-autosubmit>
+    {% for key in ('q', 'category', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+    <div>
+      <label class="form-label" for="time-filter">조리 시간</label>
+      <select class="form-select" id="time-filter" name="time">
+        {% for minutes, label in time_filters.items() %}<option value="{{ minutes }}" {{ 'selected' if filters.time == minutes }}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label" for="origin-filter">작성 방식</label>
+      <select class="form-select" id="origin-filter" name="origin">
+        {% for key, label in origin_filters.items() %}<option value="{{ key }}" {{ 'selected' if filters.origin == key }}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <noscript><button class="rm-btn rm-btn-secondary">적용</button></noscript>
+    {% if filtered %}<a class="rm-btn rm-btn-quiet" href="{{ url_for('main.index', sort=filters.sort if filters.sort == 'popular' else None) }}">검색·필터 초기화</a>{% endif %}
+  </form>
+</div>
+
+<div class="rm-tabs" aria-label="정렬">
+  <a href="{{ url_with(sort='latest') }}" class="{{ 'active' if filters.sort == 'latest' }}" {{ 'aria-current=true' if filters.sort == 'latest' }}>최신순</a>
+  <a href="{{ url_with(sort='popular') }}" class="{{ 'active' if filters.sort == 'popular' }}" {{ 'aria-current=true' if filters.sort == 'popular' }}>인기순</a>
+  <span class="rm-count">{{ page.total }}개</span>
+</div>
+
+{% call recipe_grid(recipes, likes, liked, marked) %}
+  {% if filtered %}
+    {{ empty("조건에 맞는 레시피가 없어요.", "검색어나 요리 종류·조리 시간 조건을 바꿔 보세요.", url_for('main.index'), "검색·필터 초기화") }}
   {% else %}
-    {{ empty_box("🍲", "아직 등록된 레시피가 없어요", "레시피 등록 기능이 열리면 첫 번째 레시피의 주인공이 되어 보세요!") }}
+    {{ empty("아직 등록된 레시피가 없어요.", "자주 해 먹는 요리부터 올려 보세요. 다른 사람이 AI 믹스 재료로 쓸 수 있어요.", url_for('recipes.new'), "첫 레시피 등록하기") }}
   {% endif %}
-</section>
+{% endcall %}
+
+{% if page.pages > 1 %}
+<nav class="rm-pagination" aria-label="페이지">
+  {% if page.has_prev %}<a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.prev_num) }}">이전</a>{% endif %}
+  <span class="rm-btn rm-btn-quiet" aria-current="page">{{ page.page }} / {{ page.pages }}</span>
+  {% if page.has_next %}<a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.next_num) }}">다음</a>{% endif %}
+</nav>
+{% endif %}
 {% endblock %}

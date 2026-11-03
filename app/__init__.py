@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
 try:  # .env 파일의 GEMINI_API_KEY, SECRET_KEY 등을 환경변수로 읽는다 (배포 서버에서는 환경변수를 직접 등록)
@@ -18,6 +18,15 @@ from .config import Config, database_url
 from .extensions import csrf, db, login_manager
 
 SERVICE_NAME = "레시피 믹스"
+
+
+def _upgrade_schema():
+    """create_all 은 이미 있는 테이블에 새 컬럼을 추가하지 않는다.
+    1차에서 만든 DB(category 컬럼 없음)도 그대로 쓸 수 있게 빠진 컬럼만 추가한다."""
+    cols = {c["name"] for c in inspect(db.engine).get_columns("recipes")}
+    if "category" not in cols:
+        with db.engine.begin() as conn:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT '기타'"))
 
 
 @event.listens_for(Engine, "connect")
@@ -49,8 +58,11 @@ def create_app(overrides=None):
     from . import models  # noqa: F401  (create_all 이 테이블을 알 수 있게 모델을 불러온다)
     from .auth import bp as auth_bp
     from .main import bp as main_bp
-    app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
+    from .mix import bp as mix_bp
+    from .pantry import bp as pantry_bp
+    from .recipes import bp as recipes_bp
+    for bp in (main_bp, auth_bp, recipes_bp, mix_bp, pantry_bp):
+        app.register_blueprint(bp)
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -59,6 +71,30 @@ def create_app(overrides=None):
     @app.context_processor
     def inject_globals():
         return {"SERVICE_NAME": SERVICE_NAME}
+
+    from .ai import CHANGE_TYPES
+    from .recipe_util import format_amount, format_quantity
+
+    @app.template_global()
+    def amount(item, factor=1.0):
+        """재료 수량+단위 (dict 나 Ingredient 모두)"""
+        get = item.get if isinstance(item, dict) else lambda k: getattr(item, k)
+        return format_amount(get("quantity"), get("unit"), factor)
+
+    app.jinja_env.globals.update(format_quantity=format_quantity, CHANGE_TYPES=CHANGE_TYPES)
+
+    @app.template_global()
+    def url_with(**changes):
+        """지금 주소의 검색 조건은 그대로 두고 일부만 바꾼 주소 (필터·정렬·페이지 링크용)"""
+        args = request.args.to_dict(flat=False)
+        if "page" not in changes:
+            args.pop("page", None)
+        for key, value in changes.items():
+            if value in (None, "", "all", "전체", 0, "latest"):
+                args.pop(key, None)
+            else:
+                args[key] = [value]
+        return url_for(request.endpoint, **(request.view_args or {}), **args)
 
     @app.template_filter("kst")
     def kst(value, fmt="%Y.%m.%d"):
@@ -85,5 +121,6 @@ def create_app(overrides=None):
 
     with app.app_context():
         db.create_all()  # 없는 테이블만 만든다 (이미 있는 테이블·데이터는 그대로)
+        _upgrade_schema()
 
     return app

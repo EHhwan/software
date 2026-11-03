@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty with context %}
+{% block title %}보유 재료 추천 · {{ SERVICE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="rm-page-heading">
+  <div class="rm-eyebrow">있는 재료로 요리하기</div>
+  <h1>지금 가진 재료로 시작하세요.</h1>
+  <p>보유 재료와 레시피를 비교해 만들기 쉬운 후보를 찾고, 부족한 재료는 AI가 대체 방법과 바뀐 조리법을 제안해요.</p>
+</div>
+
+<div class="rm-workgrid">
+  <div class="rm-stack">
+    <form class="rm-panel" method="get" action="{{ url_for('pantry.index') }}" id="pantry-form">
+      <h2>보유 재료</h2>
+      <div class="rm-field">
+        <label class="form-label" for="ingredient-input">재료 이름</label>
+        <div class="d-flex gap-2">
+          <div class="rm-autocomplete">
+            <input id="ingredient-input" name="add" class="form-control" placeholder="재료 이름 입력 · 예: 달" autocomplete="off"
+                   role="combobox" aria-autocomplete="list" aria-controls="ingredient-suggestions" aria-expanded="false"
+                   aria-describedby="ingredient-hint ingredient-error" data-suggest-url="{{ url_for('pantry.suggest') }}">
+            <ul class="rm-suggestions" id="ingredient-suggestions" role="listbox" aria-label="재료 이름 추천" hidden></ul>
+          </div>
+          <button type="button" class="rm-btn rm-btn-secondary" id="ingredient-add">추가</button>
+        </div>
+        <p class="invalid-feedback d-block" id="ingredient-error" aria-live="polite"></p>
+        <p class="rm-small rm-muted mt-1" id="ingredient-hint">일부 글자만 입력해도 후보를 보여 드려요. 목록에 없는 재료도 직접 추가할 수 있어요. (여러 개는 쉼표로 구분)</p>
+      </div>
+      <div class="rm-chips" id="ingredient-chips" aria-label="추가한 재료">
+        {% for h in have %}
+        <span class="rm-chip rm-static" data-chip><span>{{ h }}</span><input type="hidden" name="have" value="{{ h }}"><button type="button" aria-label="{{ h }} 삭제" data-remove-chip>×</button></span>
+        {% endfor %}
+      </div>
+      <p class="rm-small rm-muted mt-3">기본 양념(소금, 식용유 등)도 실제로 가진 경우에만 추가해 주세요.</p>
+      <button class="rm-btn mt-3">후보 찾기</button>
+    </form>
+
+    {% if searched %}
+    <section class="rm-panel" aria-labelledby="candidates-title">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 id="candidates-title">보유 재료로 찾은 후보</h2>
+        <span class="rm-badge rm-badge-neutral">재료 이름 일치 기준</span>
+      </div>
+      {% for c in candidates %}
+      {% set r = c.r %}
+      <article class="rm-candidate">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+          <h3><a href="{{ url_for('recipes.detail', recipe_id=r.id) }}">{{ r.title }}</a></h3>
+          <span class="rm-small rm-muted">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분</span>
+        </div>
+        <div class="rm-availability">
+          <span class="rm-available">{{ r.ingredients|length }}가지 중 {{ c.has|length }}가지 보유</span>
+          <span class="rm-missing">추가 {{ c.missing|length }}가지</span>
+        </div>
+        <div class="rm-breakdown">
+          <p><strong>보유 재료</strong>{{ c.has|map(attribute='name')|join(' · ') }}</p>
+          <p><strong>추가 필요</strong>{% for i in c.missing %}{{ i.name }} {{ amount(i) }}{{ ' · ' if not loop.last }}{% else %}없음{% endfor %}</p>
+        </div>
+        <div class="rm-end-row">
+          <button type="button" class="rm-btn rm-btn-secondary" data-copy-text="{{ r.title }} · 장보기 목록&#10;{% for i in c.missing %}□ {{ i.name }} {{ amount(i) }}&#10;{% else %}추가로 필요한 재료가 없어요.{% endfor %}">장보기 목록 복사</button>
+          {% if current_user.is_authenticated %}
+          <form method="post" action="{{ url_for('pantry.adapt') }}" data-loading-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="recipe_id" value="{{ r.id }}">
+            {% for h in have %}<input type="hidden" name="have" value="{{ h }}">{% endfor %}
+            <button class="rm-btn"><span class="rm-idle">AI로 내 재료에 맞게 조정</span><span class="rm-loading">AI가 조정하는 중…</span></button>
+          </form>
+          {% else %}
+          <a class="rm-btn" href="{{ url_for('auth.login', next=request.full_path) }}">로그인하고 AI로 조정</a>
+          {% endif %}
+        </div>
+      </article>
+      {% else %}
+        <div class="mt-3">{{ empty("일치하는 후보가 없어요.", "재료를 더 추가하거나 다른 이름(예: 계란 → 달걀)으로 바꿔 보세요.") }}</div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="rm-panel">
+    <h2>추천 과정</h2>
+    <ol class="rm-small rm-muted mt-3 ps-3">
+      <li class="mb-2">보유 재료와 이름이 같은 재료가 있는 레시피를 찾아요. <span class="d-block">(일반 계산, 부족한 재료가 적은 순)</span></li>
+      <li class="mb-2">후보마다 가진 재료와 더 필요한 재료를 나눠 보여 줘요.</li>
+      <li>원하는 후보를 고르면 AI가 대체 재료와 바뀐 조리법을 제안해요.</li>
+    </ol>
+    <p class="rm-small rm-muted mt-3">재료 일치율을 안전성이나 영양 점수로 표현하지 않아요.</p>
+  </aside>
+</div>
+{% endblock %}

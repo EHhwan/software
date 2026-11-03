@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}원본과 비교 · {{ SERVICE_NAME }}{% endblock %}
+{% set SYMBOL = {'add': '＋', 'remove': '−', 'quantity': '↔', 'order': '↕', 'keep': '＝'} %}
+
+{% block content %}
+{% set changed = changes|rejectattr('type', 'equalto', 'keep')|list %}
+<div class="rm-crumb"><a href="{{ back_url }}">{{ back_label }}</a> / 원본과 비교</div>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-2">
+  <div>
+    <div class="rm-eyebrow">바뀐 점</div>
+    <h1 class="mt-2">무엇을, 왜 바꿨는지<br>한눈에 확인하세요.</h1>
+    <p class="rm-muted mt-2">바뀐 부분에만 옅은 강조를 더했어요. 각 변경이 어느 원본을 기준으로 하는지도 함께 표시합니다.</p>
+  </div>
+  <a class="rm-btn rm-btn-secondary" href="{{ back_url }}">{{ back_label }}</a>
+</div>
+
+<div class="rm-compare-sources">
+  {% for s in sources[:2] %}
+  <div class="rm-source-box"><span class="rm-source-label">원본 {{ 'A · 내 레시피' if loop.first else 'B · 다른 사람의 레시피' }}</span><h2>{{ s.title }}</h2><p>{{ s.author }}{% if s.servings %} · {{ s.servings }}인분 · {{ s.cook_time_min }}분{% endif %}</p></div>
+  {% endfor %}
+  <div class="rm-source-box rm-result-source"><span class="rm-source-label">조합 결과</span><h2>{{ result.title }}</h2><p>{{ result.servings }}인분 · 약 {{ result.cook_time_min }}분{{ ' · 저장 전' if draft and not draft.saved_recipe_id }}</p></div>
+</div>
+
+<div class="rm-comparison-board" id="comparison-board">
+  <div class="rm-comparison-top">
+    <h2>달라진 점 <span class="rm-small rm-muted">{{ changed|length }}건</span></h2>
+    <p class="rm-small rm-muted mt-1">왼쪽은 원본, 오른쪽은 조합 결과예요. 바꾼 이유는 아래에서 따로 읽을 수 있어요.</p>
+    <div class="rm-compare-filters" aria-label="변경 유형 필터">
+      <button type="button" class="rm-pill-btn" data-change-filter="changed" aria-pressed="true">변경만 {{ changed|length }}</button>
+      {% for t in ['add', 'remove', 'quantity', 'order'] %}{% set n = changes|selectattr('type', 'equalto', t)|list|length %}{% if n %}
+      <button type="button" class="rm-pill-btn" data-change-filter="{{ t }}" aria-pressed="false">{{ SYMBOL[t] }} {{ CHANGE_TYPES[t]|replace(' 변경', '') }} {{ n }}</button>
+      {% endif %}{% endfor %}
+      {% if changes|length > changed|length %}<button type="button" class="rm-pill-btn" data-change-filter="all" aria-pressed="false">유지 항목 포함 {{ changes|length }}</button>{% endif %}
+    </div>
+    <div class="rm-comparison-controls">
+      <span data-change-count aria-live="polite">변경된 항목 {{ changed|length }}개 표시</span>
+      <label class="rm-checkline rm-small"><input type="checkbox" data-highlight-toggle checked>변경 부분 강조</label>
+    </div>
+  </div>
+  <div class="rm-change-list">
+    {% for c in changes %}
+    <article class="rm-change-card {{ c.type }}" data-change="{{ c.type }}" {{ 'hidden' if c.type == 'keep' }}>
+      <div class="rm-change-heading">
+        <div class="d-flex align-items-center gap-2"><span class="rm-change-type">{{ SYMBOL[c.type] }} {{ CHANGE_TYPES[c.type] }}</span><h3>{{ c.item }}</h3></div>
+        <span class="rm-source-label fw-normal rm-muted">원본 {{ c.basis }} 기준</span>
+      </div>
+      <div class="rm-change-values">
+        <div class="rm-before"><span class="rm-value-label">원본 {{ c.basis }}</span><span class="rm-value-text">{% if c.type == 'remove' %}<del class="rm-old-value">{{ c.before or '-' }}</del>{% else %}{{ c.before or '없음' }}{% endif %}</span></div>
+        <span class="rm-change-arrow" aria-label="변경 후">→</span>
+        <div><span class="rm-value-label">조합 결과</span><span class="rm-value-text">{% if c.type == 'keep' %}{{ c.after }}{% else %}<mark class="rm-ink">{{ c.after or ('제외' if c.type == 'remove' else '-') }}</mark>{% endif %}</span></div>
+      </div>
+      {% if c.reason %}<p class="rm-change-reason"><strong>{{ '유지 이유' if c.type == 'keep' else '변경 이유' }}</strong>{{ c.reason }}</p>{% endif %}
+    </article>
+    {% else %}
+    <div class="rm-empty">AI가 변경 내역을 따로 적지 않았어요. 결과 레시피의 재료와 순서를 직접 확인해 주세요.</div>
+    {% endfor %}
+  </div>
+  <div class="rm-compare-footer">
+    <p class="rm-small rm-muted">AI가 만든 비교예요. 재료 분량과 조리 순서를 검토한 뒤 저장하세요.</p>
+    {% if draft and not draft.saved_recipe_id %}<a class="rm-btn" href="{{ url_for('recipes.new', draft=draft.id) }}">결과 수정하기</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

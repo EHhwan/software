@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stepper, empty with context %}
+{% block title %}AI 레시피 믹스 · {{ SERVICE_NAME }}{% endblock %}
+
+{% macro source_card(kind, label, r, list) %}
+<div class="rm-selectcard">
+  <div class="rm-small rm-muted">{{ label }}</div>
+  {% if r %}
+    <div class="rm-selected-name" id="{{ kind }}-name">{{ r.title }}</div>
+    <div class="rm-small rm-muted" id="{{ kind }}-meta">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분</div>
+    <button type="button" class="rm-btn rm-btn-secondary rm-btn-wide mt-3" data-open-dialog="{{ kind }}-dialog" {{ 'disabled' if list|length < 2 }}>다른 레시피 선택</button>
+  {% elif kind == 'own' %}
+    <p class="mt-2">아직 내 레시피가 없어요.</p>
+    <a class="rm-btn rm-btn-secondary rm-btn-wide mt-3" href="{{ url_for('recipes.new') }}">레시피 등록하기</a>
+  {% else %}
+    <p class="mt-2">아직 다른 사람이 공개한 레시피가 없어요.</p>
+    <a class="rm-btn rm-btn-secondary rm-btn-wide mt-3" href="{{ url_for('main.index') }}">레시피 둘러보기</a>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro source_dialog(kind, title, list, current) %}
+<dialog class="rm-dialog" id="{{ kind }}-dialog" aria-labelledby="{{ kind }}-dialog-title">
+  <h2 id="{{ kind }}-dialog-title">{{ title }}</h2>
+  <p class="rm-small rm-muted">조합에 사용할 레시피 하나를 고르세요.</p>
+  <div class="rm-dialog-options">
+    {% for r in list %}
+    <button type="button" class="rm-dialog-option" data-pick="{{ kind }}" data-id="{{ r.id }}" data-title="{{ r.title }}"
+            data-meta="{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분" aria-current="{{ 'true' if current and current.id == r.id else 'false' }}">
+      <span><strong>{{ r.title }}</strong><br><small>{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분{{ ' · 나만 보기' if not r.is_public }}</small></span>
+      <span aria-hidden="true">선택 →</span>
+    </button>
+    {% endfor %}
+  </div>
+  <div class="rm-end-row"><button type="button" class="rm-btn rm-btn-secondary" data-close>닫기</button></div>
+</dialog>
+{% endmacro %}
+
+{% block content %}
+<div class="rm-page-heading">
+  <div class="rm-eyebrow">AI 레시피 믹스</div>
+  <h1>두 레시피를 하나의 요리로.</h1>
+  <p>원본의 재료와 조리법을 비교하고, 조합 목적에 맞게 다시 구성합니다.</p>
+</div>
+
+<form method="post" id="mix-form" action="{{ url_for('mix.index') }}" data-loading-form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="own" id="own-id" value="{{ own.id if own }}">
+  <input type="hidden" name="other" id="other-id" value="{{ other.id if other }}">
+  <div class="rm-workgrid">
+    <div class="rm-stack">
+      <div class="rm-panel">
+        <div class="rm-panelhead"><span class="rm-stepnum">1</span><h2>레시피 선택</h2></div>
+        <div class="rm-selection-grid">
+          {{ source_card('own', '내 레시피', own, own_list) }}
+          {{ source_card('other', '다른 사람의 레시피', other, other_list) }}
+        </div>
+      </div>
+
+      <div class="rm-panel">
+        <div class="rm-panelhead"><span class="rm-stepnum">2</span><h2>원하는 조합</h2></div>
+        <label class="form-label" for="goal">어떤 요리로 만들까요?</label>
+        <textarea class="form-control" id="goal" name="goal" maxlength="300" placeholder="예: 김치의 맛은 살리고, 크림을 더해 부드럽게 만들어 주세요.">{{ goal }}</textarea>
+        <div class="rm-chips" aria-label="조합 목표 예시">
+          {% for label, text in goal_examples %}<button type="button" class="rm-chip" data-goal="{{ text }}" aria-pressed="{{ 'true' if goal == text else 'false' }}">{{ label }}</button>{% endfor %}
+        </div>
+        <div class="rm-field">
+          <div class="rm-serving-row">
+            <div><span class="rm-label mb-1" id="mix-servings-label">만들 분량</span><p class="rm-small rm-muted">결과 레시피의 재료량을 이 분량에 맞춰 계산해요.</p></div>
+            {{ stepper('mix-servings', servings, min=1, max=max_servings, label_id='mix-servings-label', name='servings') }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="rm-panel rm-summary">
+      <h2>조합 요약</h2>
+      <dl>
+        <dt>내 레시피</dt><dd id="summary-own">{{ own.title if own else '선택 안 함' }}</dd>
+        <dt>다른 사람의 레시피</dt><dd id="summary-other">{{ other.title if other else '선택 안 함' }}</dd>
+        <dt>분량</dt><dd id="summary-servings">{{ servings }}인분</dd>
+      </dl>
+      <div class="rm-subtle">AI 결과는 바로 저장되지 않아요. 재료 분량과 조리 순서를 확인한 뒤 저장하세요.</div>
+      <button class="rm-btn rm-btn-wide mt-3" {{ 'disabled' if not (own and other) }}>
+        <span class="rm-idle">조합 레시피 만들기</span><span class="rm-loading">AI가 조합하는 중… (최대 1분)</span>
+      </button>
+      <p class="rm-small rm-muted mt-2" aria-live="polite" data-loading-status></p>
+    </aside>
+  </div>
+</form>
+
+{% if own_list|length > 1 %}{{ source_dialog('own', '내 레시피 선택', own_list, own) }}{% endif %}
+{% if other_list|length > 1 %}{{ source_dialog('other', '다른 사람의 공개 레시피 선택', other_list, other) }}{% endif %}
+{% endblock %}

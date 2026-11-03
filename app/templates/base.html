@@ -1,3 +1,4 @@
+{% set nav = request.endpoint or '' %}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -5,64 +6,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ SERVICE_NAME }}{% endblock %}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-<nav class="navbar navbar-expand-md rm-navbar sticky-top py-2">
-  <div class="container">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.index') }}">
-      <span class="rm-logo">🍳</span>
-      <span class="rm-brand">레시피 <em>믹스</em></span>
-    </a>
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
-            aria-controls="nav" aria-expanded="false" aria-label="메뉴 열기">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="nav">
-      <ul class="navbar-nav me-auto ms-md-3 gap-md-1">
-        {# TODO(2차·4차·5차): 기능이 생기면 링크로 바꾼다 #}
-        <li class="nav-item"><span class="nav-link disabled">📖 레시피 <span class="rm-soon">준비 중</span></span></li>
-        <li class="nav-item"><span class="nav-link disabled">✨ AI 믹스 <span class="rm-soon">준비 중</span></span></li>
-        <li class="nav-item"><span class="nav-link disabled">🧺 재료로 추천 <span class="rm-soon">준비 중</span></span></li>
-      </ul>
-      <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-        {% if current_user.is_authenticated %}
-          <a class="btn btn-rm-outline btn-rm-sm" href="{{ url_for('main.mypage') }}">👤 {{ current_user.nickname }}</a>
-          <form method="post" action="{{ url_for('auth.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-link btn-sm text-decoration-none text-muted-rm fw-semibold">로그아웃</button>
-          </form>
-        {% else %}
-          <a class="btn btn-link btn-sm text-decoration-none fw-semibold text-dark" href="{{ url_for('auth.login') }}">로그인</a>
-          <a class="btn btn-rm btn-rm-sm" href="{{ url_for('auth.register') }}">회원가입</a>
-        {% endif %}
-      </div>
+<header class="rm-header">
+  <nav class="rm-nav" aria-label="주 메뉴">
+    <a href="{{ url_for('main.index') }}" class="rm-brand"><span class="rm-brand-mark" aria-hidden="true"></span>{{ SERVICE_NAME }}</a>
+    <div class="rm-navlinks">
+      <a class="rm-navlink {{ 'active' if nav in ('main.index', 'recipes.detail') }}" href="{{ url_for('main.index') }}"
+         {{ 'aria-current=page' if nav == 'main.index' }}>레시피 둘러보기</a>
+      <a class="rm-navlink {{ 'active' if nav.startswith('mix.') or nav == 'recipes.compare' }}" href="{{ url_for('mix.index') }}"
+         {{ 'aria-current=page' if nav == 'mix.index' }}>AI 레시피 믹스</a>
+      <a class="rm-navlink {{ 'active' if nav.startswith('pantry.') }}" href="{{ url_for('pantry.index') }}"
+         {{ 'aria-current=page' if nav == 'pantry.index' }}>보유 재료 추천</a>
     </div>
-  </div>
-</nav>
+    <div class="rm-nav-actions">
+      {% if current_user.is_authenticated %}
+        <a class="rm-btn rm-btn-quiet" href="{{ url_for('main.mypage') }}">{{ current_user.nickname }}님의 레시피</a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="rm-btn rm-btn-secondary">로그아웃</button>
+        </form>
+      {% else %}
+        <a class="rm-btn rm-btn-quiet" href="{{ url_for('auth.register') }}">회원가입</a>
+        <a class="rm-btn rm-btn-secondary" href="{{ url_for('auth.login', next=request.full_path if nav not in ('auth.login', 'auth.register') else None) }}">로그인</a>
+      {% endif %}
+    </div>
+  </nav>
+</header>
 
-<main class="container py-4 py-md-5 flex-grow-1">
-  {% set ICONS = {'success': '✅', 'danger': '⚠️', 'warning': '🔐', 'info': '💡'} %}
+<main class="rm-container flex-grow-1 w-100">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}
-      {% set cat = cat if cat in ICONS else 'info' %}
-      <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
-        <span aria-hidden="true">{{ ICONS[cat] }}</span><span>{{ msg }}</span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="닫기"></button>
+      <div class="rm-alert rm-alert-{{ cat if cat in ['success', 'danger', 'warning', 'info'] else 'info' }}" role="{{ 'alert' if cat == 'danger' else 'status' }}">
+        <span>{{ msg }}</span>
+        <button type="button" class="btn-close" data-dismiss aria-label="알림 닫기"></button>
       </div>
     {% endfor %}
   {% endwith %}
   {% block content %}{% endblock %}
 </main>
 
-<footer class="rm-footer text-center pb-4 px-3">
-  <span class="rm-notice">🤖 AI가 만든 레시피는 실제 조리 결과를 보장하지 않아요. 만들기 전에 꼭 검토해 주세요.</span>
-</footer>
+<footer class="rm-footer">{{ SERVICE_NAME }} · AI가 만든 레시피는 실제 조리 결과를 보장하지 않아요. 재료 분량과 순서를 검토한 뒤 만들어 주세요.</footer>
+<div id="rm-toast" class="rm-toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

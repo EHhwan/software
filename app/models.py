@@ -1,8 +1,5 @@
-"""데이터 모델.
-
-1차에서는 회원 기능만 화면에 연결하고, 레시피·좋아요·출처 테이블은 구조만 먼저 만들어 둔다.
-(2차 레시피 CRUD, 3차 좋아요, 4~6차 AI 레시피 저장에서 사용)
-"""
+"""데이터 모델: 사용자, 레시피(재료·조리 순서), 좋아요, 즐겨찾기, AI 레시피 출처, AI 결과 임시 보관."""
+import json
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -35,15 +32,20 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+CATEGORIES = ["밥·덮밥·볶음밥", "면", "국·탕·찌개", "반찬", "구이·찜·볶음", "샐러드", "간식·디저트", "기타"]
+
+
 class Recipe(db.Model):
     __tablename__ = "recipes"
 
     ORIGINS = ("user", "ai_mix", "ai_pantry")  # 직접 작성 / AI 레시피 믹스 / AI 보유 재료 추천
+    ORIGIN_LABEL = {"user": "직접 작성", "ai_mix": "AI 조합", "ai_pantry": "AI 재료 맞춤"}
 
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = db.Column(db.String(60), nullable=False)
     description = db.Column(db.Text, nullable=False, default="")
+    category = db.Column(db.String(20), nullable=False, default="기타", index=True)
     servings = db.Column(db.Integer, nullable=False)          # 인분
     cook_time_min = db.Column(db.Integer, nullable=False)     # 조리 시간(분)
     origin = db.Column(db.String(20), nullable=False, default="user")
@@ -65,6 +67,18 @@ class Recipe(db.Model):
     @property
     def is_ai(self):
         return self.origin != "user"
+
+    @property
+    def origin_label(self):
+        return self.ORIGIN_LABEL.get(self.origin, "직접 작성")
+
+    @property
+    def ai_info(self):
+        """AI 결과의 특징·달라진 점·변경 이유 (ai_note JSON). 직접 작성한 레시피는 빈 dict."""
+        try:
+            return json.loads(self.ai_note) if self.ai_note else {}
+        except ValueError:
+            return {}
 
 
 class Ingredient(db.Model):
@@ -120,3 +134,43 @@ class RecipeSource(db.Model):
 
     recipe = db.relationship("Recipe", foreign_keys=[recipe_id], back_populates="sources")
     source_recipe = db.relationship("Recipe", foreign_keys=[source_recipe_id])
+
+
+class Bookmark(db.Model):
+    """즐겨찾기. 좋아요(공개 인기 지표)와 달리 나만 보는 '다시 만들고 싶은 레시피' 목록."""
+    __tablename__ = "bookmarks"
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class AIDraft(db.Model):
+    """저장 전 AI 결과. 사용자가 확인·수정한 뒤 레시피로 저장하면 Recipe 가 만들어진다."""
+    __tablename__ = "ai_drafts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)          # "ai_mix" / "ai_pantry" (= 저장될 레시피의 origin)
+    payload = db.Column(db.Text, nullable=False)              # 검증을 통과한 AI 결과 (JSON)
+    sources = db.Column(db.Text, nullable=False, default="[]")  # [{id, title, author}, ...] 원본 레시피
+    goal = db.Column(db.Text, nullable=False, default="")    # 조합 목표 · 보유 재료 등 요청 내용
+    saved_recipe_id = db.Column(db.Integer, db.ForeignKey("recipes.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    @property
+    def data(self):
+        return json.loads(self.payload)
+
+    @property
+    def source_list(self):
+        return json.loads(self.sources or "[]")
+
+
+class AICall(db.Model):
+    """AI 호출 기록 (사용자별 분당 횟수 제한용). 무료 사용량을 한 사람이 다 쓰지 않게 한다."""
+    __tablename__ = "ai_calls"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)

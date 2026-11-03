@@ -1,46 +1,37 @@
 {% extends "base.html" %}
-{% from "_macros.html" import recipe_cards, empty_box %}
-{% block title %}마이페이지 · {{ SERVICE_NAME }}{% endblock %}
+{% from "_macros.html" import recipe_grid, empty with context %}
+{% block title %}내 레시피 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
-<section class="rm-profile mb-4">
-  <div class="rm-profile-banner"></div>
-  <div class="px-4 pb-4 d-flex flex-wrap align-items-end gap-3">
-    <div class="rm-avatar" aria-hidden="true">{{ current_user.nickname[:1] }}</div>
-    <div class="me-auto">
-      <h1 class="h4 fw-black mb-0">{{ current_user.nickname }}</h1>
-      <p class="text-muted-rm small mb-0">@{{ current_user.username }} · {{ current_user.created_at|kst }} 가입</p>
+<section class="rm-profile">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+      <div class="rm-eyebrow">내 레시피</div>
+      <h1>{{ current_user.nickname }}의 레시피</h1>
+      <p class="rm-small rm-muted mt-2">@{{ current_user.username }} · {{ current_user.created_at|kst }} 가입</p>
     </div>
-    <div class="d-flex gap-2">
-      <div class="rm-stat"><strong>{{ mine|length }}</strong><span>내 레시피</span></div>
-      <div class="rm-stat"><strong>{{ ai_made|length }}</strong><span>AI 레시피</span></div>
-    </div>
+    <a class="rm-btn" href="{{ url_for('recipes.new') }}">레시피 등록</a>
+  </div>
+  <div class="rm-inline-stats">
+    <span><strong>{{ counts.user }}</strong>직접 작성</span>
+    <span><strong>{{ counts.ai }}</strong>AI로 만든 레시피</span>
+    <span><strong>{{ counts.favorites }}</strong>즐겨찾기</span>
   </div>
 </section>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <ul class="nav rm-tabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mine" type="button" role="tab"
-              aria-controls="tab-mine" aria-selected="true">📖 내 레시피</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ai" type="button" role="tab"
-              aria-controls="tab-ai" aria-selected="false">✨ AI 레시피</button>
-    </li>
-  </ul>
-  {# TODO(2차): 레시피 등록 페이지로 연결 #}
-  <span class="btn btn-rm btn-rm-sm disabled" aria-disabled="true">+ 레시피 등록 <span class="rm-soon ms-1">준비 중</span></span>
-</div>
+<nav class="rm-tabs" aria-label="내 레시피 분류">
+  {% for key, label in [('user', '직접 작성'), ('ai', 'AI로 만든 레시피'), ('favorites', '즐겨찾기')] %}
+    <a href="{{ url_for('main.mypage', tab=key) }}" class="{{ 'active' if tab == key }}" {{ 'aria-current=page' if tab == key }}>{{ label }} {{ counts[key] }}</a>
+  {% endfor %}
+</nav>
 
-<div class="tab-content">
-  <div class="tab-pane fade show active" id="tab-mine" role="tabpanel">
-    {% if mine %}{{ recipe_cards(mine) }}
-    {% else %}{{ empty_box("📝", "아직 등록한 레시피가 없어요", "자주 해 먹는 요리부터 올려 보세요. 다른 사람이 AI 믹스 재료로 쓸 수 있어요.") }}{% endif %}
-  </div>
-  <div class="tab-pane fade" id="tab-ai" role="tabpanel">
-    {% if ai_made %}{{ recipe_cards(ai_made) }}
-    {% else %}{{ empty_box("✨", "AI로 만든 레시피가 여기에 모여요", "AI 믹스나 재료 추천으로 만든 레시피를 저장하면 보여 드려요.") }}{% endif %}
-  </div>
-</div>
+{% call recipe_grid(shown, likes, liked, marked, show_visibility=True) %}
+  {% if tab == 'favorites' %}
+    {{ empty("즐겨찾은 레시피가 없어요.", "다시 만들고 싶은 레시피의 ☆ 버튼을 눌러 보세요.", url_for('main.index'), "레시피 둘러보기") }}
+  {% elif tab == 'ai' %}
+    {{ empty("AI로 만든 레시피가 없어요.", "AI 레시피 믹스나 보유 재료 추천 결과를 저장하면 여기에 모여요.", url_for('mix.index'), "AI 레시피 믹스") }}
+  {% else %}
+    {{ empty("아직 등록한 레시피가 없어요.", "재료와 조리 순서만 적으면 사진 없이도 등록할 수 있어요.", url_for('recipes.new'), "레시피 등록") }}
+  {% endif %}
+{% endcall %}
 {% endblock %}

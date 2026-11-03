@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set editing = mode == 'edit' %}
+{% block title %}{{ '레시피 수정' if editing else '레시피 등록' }} · {{ SERVICE_NAME }}{% endblock %}
+
+{% macro ingredient_row(i={}) %}
+<div class="rm-ingredient-row" data-ingredient-row>
+  <input class="form-control" name="ing_name" value="{{ i.name or '' }}" maxlength="40" placeholder="재료명" aria-label="재료 이름">
+  <input class="form-control" name="ing_qty" value="{{ format_quantity(i.quantity, i.unit) if i.quantity is not none and i.name else '' }}" maxlength="20" placeholder="수량" aria-label="수량" inputmode="decimal">
+  <input class="form-control" name="ing_unit" value="{{ i.unit or '' }}" maxlength="20" placeholder="단위" aria-label="단위" list="unit-options">
+  <button type="button" class="rm-btn rm-btn-quiet" data-remove-row aria-label="이 재료 삭제">×</button>
+</div>
+{% endmacro %}
+
+{% macro step_row(text='') %}
+<div class="rm-step-row" data-step-row>
+  <div class="d-flex justify-content-between align-items-center">
+    <label class="form-label mb-1" data-step-label>단계</label>
+    <div class="d-flex">
+      <button type="button" class="rm-btn rm-btn-quiet rm-btn-sm" data-move="-1" aria-label="이 단계를 위로">↑</button>
+      <button type="button" class="rm-btn rm-btn-quiet rm-btn-sm" data-move="1" aria-label="이 단계를 아래로">↓</button>
+      <button type="button" class="rm-btn rm-btn-quiet rm-btn-sm" data-remove-row aria-label="이 단계 삭제">삭제</button>
+    </div>
+  </div>
+  <textarea class="form-control" name="step" maxlength="500" rows="2" placeholder="재료를 어떻게 조리하는지 적어 주세요.">{{ text }}</textarea>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="rm-page-heading">
+  <div class="rm-eyebrow">{{ 'AI 결과 수정' if draft else '내 레시피 작성' }}</div>
+  <h1>{{ '레시피 수정' if editing else ('AI 레시피 다듬기' if draft else '레시피 등록') }}</h1>
+  <p>{{ 'AI가 만든 재료와 순서를 확인하고 고친 뒤 저장하세요. 원본 레시피 출처가 함께 기록돼요.' if draft else '사진 없이도 재료와 조리 순서만으로 충분해요.' }}</p>
+</div>
+
+<form method="post" class="rm-stack" style="max-width:800px" novalidate
+      action="{{ url_for('recipes.edit', recipe_id=recipe.id) if editing else url_for('recipes.new') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if draft %}<input type="hidden" name="draft" value="{{ draft.id }}">{% endif %}
+
+  <div class="rm-panel">
+    <h2>기본 정보</h2>
+    <div class="rm-field"><label class="form-label" for="title">요리 이름</label>
+      <input id="title" name="title" class="form-control" required maxlength="60" value="{{ values.title or '' }}" placeholder="예: 김치볶음밥"></div>
+    <div class="rm-field"><label class="form-label" for="category">요리 종류</label>
+      <select id="category" name="category" class="form-select">
+        {% for c in categories %}<option {{ 'selected' if values.category == c }}>{{ c }}</option>{% endfor %}
+      </select></div>
+    <div class="rm-field"><label class="form-label" for="description">설명</label>
+      <textarea id="description" name="description" class="form-control" maxlength="1000" placeholder="맛의 특징이나 조리 팁을 적어 주세요.">{{ values.description or '' }}</textarea></div>
+    <div class="rm-two rm-field">
+      <div><label class="form-label" for="servings">인분</label>
+        <input id="servings" name="servings" class="form-control" type="number" min="1" max="20" required value="{{ values.servings or '' }}"></div>
+      <div><label class="form-label" for="cook_time_min">조리 시간 (분)</label>
+        <input id="cook_time_min" name="cook_time_min" class="form-control" type="number" min="1" max="600" required value="{{ values.cook_time_min or '' }}"></div>
+    </div>
+  </div>
+
+  <div class="rm-panel">
+    <h2>재료</h2>
+    <p class="rm-small rm-muted mt-1">수량은 2, 0.5, 1/2 처럼 숫자로 적어요. ‘약간’, ‘적당량’은 수량 칸에 그대로 적으면 돼요.</p>
+    <div id="ingredient-rows">
+      {% for i in values.ingredients %}{{ ingredient_row(i) }}{% endfor %}
+      {% for _ in range([3 - values.ingredients|length, 1]|max) %}{{ ingredient_row() }}{% endfor %}
+    </div>
+    <button type="button" class="rm-btn rm-btn-secondary mt-3" data-add-ingredient>+ 재료 추가</button>
+    <datalist id="unit-options">{% for u in ['g', 'ml', '개', '공기', '대', '장', '쪽', '큰술', '작은술', '컵', '약간', '적당량'] %}<option value="{{ u }}">{% endfor %}</datalist>
+  </div>
+
+  <div class="rm-panel">
+    <h2>조리 순서</h2>
+    <div id="step-rows" class="mt-3">
+      {% for s in values.steps %}{{ step_row(s) }}{% endfor %}
+      {% for _ in range([2 - values.steps|length, 1]|max) %}{{ step_row() }}{% endfor %}
+    </div>
+    <button type="button" class="rm-btn rm-btn-secondary mt-3" data-add-step>+ 단계 추가</button>
+  </div>
+
+  <div class="rm-panel">
+    <h2>공개 범위</h2>
+    <label class="rm-radio-line"><input type="radio" name="visibility" value="public" {{ 'checked' if values.is_public }}>커뮤니티 공개</label>
+    <label class="rm-radio-line"><input type="radio" name="visibility" value="private" {{ 'checked' if not values.is_public }}>나만 보기</label>
+    {% if draft %}<p class="rm-small rm-muted mt-2">AI 결과는 기본으로 ‘나만 보기’예요. 직접 만들어 보고 괜찮으면 공개해 주세요.</p>{% endif %}
+    <div class="rm-end-row">
+      <a class="rm-btn rm-btn-secondary" href="{{ url_for('recipes.detail', recipe_id=recipe.id) if editing else (url_for('mix.draft', draft_id=draft.id) if draft else url_for('main.mypage')) }}">취소</a>
+      <button class="rm-btn">{{ '수정 내용 저장' if editing else ('내 레시피로 저장' if draft else '등록하기') }}</button>
+    </div>
+  </div>
+</form>
+
+<template id="ingredient-template">{{ ingredient_row() }}</template>
+<template id="step-template">{{ step_row() }}</template>
+{% endblock %}
