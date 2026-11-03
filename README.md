@@ -5,6 +5,12 @@
 - 요구사항: [docs/요구사항.md](docs/요구사항.md) · 검증 기록: [docs/검증기록.md](docs/검증기록.md)
 - 기술 스택: Flask, Flask-Login, Flask-SQLAlchemy, Flask-WTF, Bootstrap 5, SQLite / PostgreSQL, Google Gemini API
 
+## UI 시안
+
+[화면 시안·이미지·실행 안내](docs/ui-proposal/README.md) · [시안 ZIP 다운로드](docs/ui-proposal/recipe-mix-preview.zip?raw=true)
+
+변경 부분 형광펜 비교, 재료 자동완성, 카테고리·검색 필터 등을 확인할 수 있는 독립 시안입니다. 실제 Flask 앱에 적용하기 전 디자인 검토용입니다.
+
 ## 폴더 구조
 ```
 run.py               실행 파일 (python run.py / gunicorn run:app)
