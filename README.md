@@ -65,7 +65,7 @@ AI 믹스는 '내 레시피'와 '다른 사람의 공개 레시피'가 하나씩
 DB를 처음부터 다시 만들고 싶으면 서버를 끄고 `instance/recipe_mix.db` 를 지운 뒤 다시 실행한다.
 
 ## 배포 (Render)
-`render.yaml` 에 웹 서비스·PostgreSQL·환경변수 설정이 들어 있어 Blueprint 로 한 번에 만든다.
+`render.yaml` 에 웹 서비스·환경변수 설정이 들어 있어 Blueprint 로 만든다. DB는 만료 기간이 없는 **Neon(무료 PostgreSQL)** 을 쓴다.
 
 1. render.com 에 **GitHub 계정으로 로그인**
 2. 오른쪽 위 **New → Blueprint** → 이 저장소(`software`) 연결 → 브랜치 `ccr-51585c03-aolzd2` 선택

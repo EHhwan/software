@@ -1,4 +1,6 @@
-# Render 배포 설정 (Blueprint). Render 에서 New → Blueprint → 이 저장소를 고르면 웹 서비스와 DB가 함께 만들어진다.
+# Render 배포 설정 (Blueprint). Render 에서 New → Blueprint → 이 저장소를 고르면 웹 서비스가 만들어진다.
+# DB는 만료 기간이 없는 Neon(무료 PostgreSQL)을 쓰고, 그 주소를 DATABASE_URL 에 넣는다.
+# (Render 무료 DB는 만든 지 약 30일 뒤 만료되어 발표 일정과 겹칠 수 있어 옮겼다)
 services:
   - type: web
     name: recipe-mix
@@ -19,10 +21,4 @@ services:
       - key: SEED_DEMO
         value: "1"                # 시작할 때 예시 레시피 넣기 (필요 없으면 0)
       - key: DATABASE_URL
-        fromDatabase:
-          name: recipe-mix-db
-          property: connectionString
-
-databases:
-  - name: recipe-mix-db
-    plan: free
+        sync: false               # Neon 의 연결 주소를 화면에서 직접 입력 (비밀번호가 들어 있어 GitHub 에 올리지 않음)
