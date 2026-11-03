@@ -2,7 +2,8 @@
 
 내 레시피와 다른 사람의 레시피를 Gemini로 조합하고, 보유 재료에 맞게 레시피를 재구성하는 레시피 커뮤니티 (소프트웨어개발 3회차)
 
-- 요구사항: [docs/요구사항.md](docs/요구사항.md) · 검증 기록: [docs/검증기록.md](docs/검증기록.md)
+- 문서: [보고서](docs/보고서.md) · [AI 기능 설명](docs/AI기능설명.md) · [검증 기록](docs/검증기록.md) · [요구사항](docs/요구사항.md)
+- 배포 URL: (직접 입력)
 - 기술 스택: Flask, Flask-Login, Flask-SQLAlchemy, Flask-WTF, Bootstrap 5, SQLite / PostgreSQL, Google Gemini API
 
 ## UI 시안
