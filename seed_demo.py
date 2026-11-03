@@ -41,7 +41,11 @@ LIKES = {"김치볶음밥": ["minsu", "soyeon"], "버섯 크림 리소토": ["ji
 
 
 def main():
-    app = create_app()
+    seed(create_app())
+
+
+def seed(app):
+    """예시 데이터를 넣는다. 이미 있으면 건너뛰므로 여러 번 실행해도 된다."""
     with app.app_context():
         users = {}
         for username, nickname in USERS:

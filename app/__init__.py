@@ -43,6 +43,12 @@ def create_app(overrides=None):
     app.config.from_object(Config)
     os.makedirs(app.instance_path, exist_ok=True)
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url(app.instance_path)
+    if os.environ.get("RENDER"):
+        # 배포(Render): https 로만 접속하므로 로그인 쿠키도 https 에서만 보내고,
+        # 앞단 프록시가 알려 주는 원래 주소(https)를 믿는다.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+        app.config.update(SESSION_COOKIE_SECURE=True, REMEMBER_COOKIE_SECURE=True)
     if overrides:
         app.config.update(overrides)
     if app.config["SECRET_KEY"] == "dev-change-me" and not (app.debug or app.testing):

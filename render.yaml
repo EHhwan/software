@@ -1,0 +1,28 @@
+# Render 배포 설정 (Blueprint). Render 에서 New → Blueprint → 이 저장소를 고르면 웹 서비스와 DB가 함께 만들어진다.
+services:
+  - type: web
+    name: recipe-mix
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # AI 믹스는 1분 가까이 걸릴 수 있어 요청 제한 시간을 120초로 늘린다 (기본 30초면 중간에 끊김).
+    # 무료 플랜 메모리(512MB)에 맞춰 프로세스 1개 + 스레드 4개로 여러 요청을 함께 처리한다.
+    startCommand: gunicorn run:app --workers 1 --threads 4 --timeout 120
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true       # Render 가 긴 임의 문자열을 만들어 준다
+      - key: GEMINI_API_KEY
+        sync: false               # 처음 만들 때 화면에서 직접 입력 (GitHub 에 올라가지 않음)
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: SEED_DEMO
+        value: "1"                # 시작할 때 예시 레시피 넣기 (필요 없으면 0)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: recipe-mix-db
+          property: connectionString
+
+databases:
+  - name: recipe-mix-db
+    plan: free

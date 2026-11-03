@@ -16,11 +16,15 @@ from app.services import apply_recipe_data  # noqa: E402
 
 @pytest.fixture
 def app(tmp_path):
-    app = create_app({"TESTING": True, "WTF_CSRF_ENABLED": False,
-                      "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'test.db'}"})
+    # TEST_DATABASE_URL 을 주면 그 DB(예: 배포와 같은 PostgreSQL)로 테스트한다. 테스트가 끝날 때마다 테이블을 지운다.
+    pg = os.environ.get("TEST_DATABASE_URL")
+    uri = pg.replace("postgres://", "postgresql+psycopg2://", 1) if pg else f"sqlite:///{tmp_path / 'test.db'}"
+    app = create_app({"TESTING": True, "WTF_CSRF_ENABLED": False, "SQLALCHEMY_DATABASE_URI": uri})
     yield app
     with app.app_context():
         db.session.remove()
+        if pg:
+            db.drop_all()
         db.engine.dispose()
 
 

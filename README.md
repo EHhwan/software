@@ -63,13 +63,16 @@ AI 믹스는 '내 레시피'와 '다른 사람의 공개 레시피'가 하나씩
 
 DB를 처음부터 다시 만들고 싶으면 서버를 끄고 `instance/recipe_mix.db` 를 지운 뒤 다시 실행한다.
 
-## 배포 (6차, Render)
-1. Render 에서 **PostgreSQL** 을 만들고 Internal Database URL 을 복사
-2. **Web Service** 생성 → 이 저장소 선택
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn run:app`
-3. Environment: `GEMINI_API_KEY`, `SECRET_KEY`(긴 임의 문자열), `DATABASE_URL`(1번에서 복사한 주소)
+## 배포 (Render)
+`render.yaml` 에 웹 서비스·PostgreSQL·환경변수 설정이 들어 있어 Blueprint 로 한 번에 만든다.
 
-- `postgres://` 형식 주소도 `app/config.py` 가 알아서 바꿔 준다.
-- gunicorn 은 Windows 에서 실행되지 않는다. 내 노트북에서는 `python run.py` 를 쓴다.
-- Render 무료 PostgreSQL 은 일정 기간 뒤 만료될 수 있으니 데모데이 날짜에 맞춰 확인한다.
+1. render.com 에 **GitHub 계정으로 로그인**
+2. 오른쪽 위 **New → Blueprint** → 이 저장소(`software`) 연결 → 브랜치 `ccr-51585c03-aolzd2` 선택
+3. 화면에 나오는 `GEMINI_API_KEY` 칸에 AI Studio 키 입력 → **Apply** (나머지 SECRET_KEY·DB 주소는 자동)
+4. 몇 분 뒤 `https://recipe-mix-xxxx.onrender.com` 주소로 접속
+
+- 시작할 때 예시 레시피가 자동으로 들어간다(`SEED_DEMO=1`). 로그인: jieun / minsu / soyeon, 비밀번호 demo1234
+- 코드를 `git push` 하면 Render 가 자동으로 다시 배포한다.
+- 무료 플랜은 15분 동안 접속이 없으면 잠들어, 다음 첫 접속이 30~60초 걸린다. **데모데이에는 발표 전에 미리 한 번 열어 둔다.**
+- 무료 PostgreSQL 은 일정 기간이 지나면 만료될 수 있다. Render 대시보드에서 만료일을 확인하고 데모데이와 겹치지 않게 한다.
+- 로컬에서 PostgreSQL 로 테스트: `TEST_DATABASE_URL=postgresql://... python -m pytest tests -q`
