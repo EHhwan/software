@@ -128,5 +128,9 @@ def create_app(overrides=None):
     with app.app_context():
         db.create_all()  # 없는 테이블만 만든다 (이미 있는 테이블·데이터는 그대로)
         _upgrade_schema()
+        # 시작 준비에 쓴 DB 연결은 닫아 둔다. 실제 요청은 새 연결로 시작해야
+        # 배포 서버(gunicorn)에서 연결이 꼬여 'SSL error: decryption failed' 가 나는 일을 막을 수 있다.
+        db.session.remove()
+        db.engine.dispose()
 
     return app

@@ -13,6 +13,10 @@ app = create_app()
 if os.environ.get("SEED_DEMO") == "1":
     import seed_demo
     seed_demo.seed(app)
+    with app.app_context():
+        from app.extensions import db
+        db.session.remove()
+        db.engine.dispose()  # 예시 데이터를 넣느라 연 DB 연결도 닫고 요청은 새 연결로 시작
 
 if __name__ == "__main__":
     app.run(debug=True)
