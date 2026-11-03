@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import meta, stepper, ingredient_table, bookmark_button with context %}
+{% from "_macros.html" import meta, stepper, ingredient_table, bookmark_button, substitution_list with context %}
 {% block title %}{{ r.title }} · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
@@ -50,9 +50,7 @@
     {% endif %}
     {% if info.substitutions %}
     <h2>대체한 재료</h2>
-    <table class="rm-table"><tbody>
-      {% for s in info.substitutions %}<tr><th>{{ s.missing }} → {{ s.substitute or '대체 불가' }}</th><td>{{ s.how }}</td></tr>{% endfor %}
-    </tbody></table>
+    {{ substitution_list(info.substitutions) }}
     {% endif %}
     {% endif %}
   </article>

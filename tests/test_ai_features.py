@@ -143,6 +143,17 @@ def test_drafts_are_private_to_owner(client, two, fake_ai):
 
 
 # ---------- 보유 재료 ----------
+def test_validate_adapt_marks_owned_substitutes():
+    raw = {**ADAPT_ANSWER, "substitutions": [
+        {"missing": "대파", "substitute": "쪽파", "how": "향이 순해져요"},
+        {"missing": "대파", "substitute": "양파", "how": "단맛이 나요"},       # 가지지 않은 재료를 제안한 경우
+        {"missing": "간장", "substitute": None, "how": "빼도 돼요"}]}
+    out = ai.validate_adapt(raw, servings=2, have=["달걀", "쪽파", "계란"])
+    assert [s["owned"] for s in out["substitutions"]] == [True, False, False]
+    assert [i["name"] for i in out["still_needed"]] == ["간장", "양파"]   # 사야 하는 대체 재료는 자동으로 추가
+
+
+# ----------
 def test_pantry_candidates_by_code(client, make_user, make_recipe):
     u = make_user()
     make_recipe(u, "달걀밥", ingredients=(("밥", 1, "공기"), ("달걀", 2, "개")))
@@ -168,7 +179,8 @@ def test_pantry_adapt(client, app, make_user, make_recipe, fake_ai):
     assert "/ai/drafts/" in r.headers["Location"]
     assert '"대파"' in m.prompts[0] and '"쪽파"' in m.prompts[0]       # 부족한 재료와 보유 재료를 함께 보낸다
     page = client.get(r.headers["Location"]).get_data(as_text=True)
-    assert "대파 → 쪽파" in page and "간장 → 대체 불가" in page and "추가로 필요한 재료" in page
+    assert "반드시 [보유 재료] 목록에서 먼저" in m.prompts[0]
+    assert "가진 재료</span>" in page and "대체 없음" in page and "사야 할 재료" in page
     client.post(r.headers["Location"] + "/save")
     with app.app_context():
         rec = db.session.scalar(db.select(Recipe).filter_by(origin="ai_pantry"))

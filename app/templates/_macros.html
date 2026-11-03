@@ -87,6 +87,31 @@
 </div>
 {% endmacro %}
 
+{# 대체 재료: [원래 재료] → [대체 재료 + 가진 재료/사야 해요] + 바뀌는 점 #}
+{% macro substitution_list(subs) %}
+<ul class="rm-subs">
+  {% for s in subs %}
+  <li class="rm-sub">
+    <div class="rm-sub-pair">
+      <div><span class="rm-sub-label">원래 재료</span><span class="rm-sub-from">{{ s.missing }}</span></div>
+      <span class="rm-sub-arrow" aria-label="대신">→</span>
+      <div>
+        <span class="rm-sub-label">대신 쓸 재료</span>
+        {% if s.substitute %}
+          <span class="rm-sub-to">{{ s.substitute }}</span>
+          {% if s.owned is true %}<span class="rm-sub-badge rm-owned">가진 재료</span>
+          {% elif s.owned is false %}<span class="rm-sub-badge rm-buy">사야 해요</span>{% endif %}
+        {% else %}
+          <span class="rm-sub-none">대체 없음</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if s.how %}<p class="rm-sub-how">{{ s.how }}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
 {# 재료 표 (인분을 바꾸면 app.js 가 data-qty·data-unit 으로 다시 계산) #}
 {% macro ingredient_table(items, check=False, id='') %}
 <table class="rm-table" {% if id %}id="{{ id }}"{% endif %}>

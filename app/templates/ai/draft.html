@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import ingredient_table with context %}
+{% from "_macros.html" import ingredient_table, substitution_list with context %}
 {% set is_mix = d.kind == 'ai_mix' %}
 {% block title %}{{ data.title }} · AI 결과 · {{ SERVICE_NAME }}{% endblock %}
 
@@ -29,20 +29,15 @@
 
   {% if not is_mix %}
     {% if data.reason %}<p class="mt-4"><strong>추천 이유</strong> {{ data.reason }}</p>{% endif %}
-    <div class="rm-two mt-3">
-      <div>
-        <h3>대체 제안</h3>
-        {% if data.substitutions %}
-        <table class="rm-table mt-2"><tbody>
-          {% for s in data.substitutions %}<tr><th>{{ s.missing }} → {{ s.substitute or '대체 불가' }}</th><td>{{ s.how }}</td></tr>{% endfor %}
-        </tbody></table>
-        {% else %}<p class="rm-small rm-muted mt-2">대체할 재료가 없어요.</p>{% endif %}
-      </div>
-      <div>
-        <h3>추가로 필요한 재료</h3>
-        {% if data.still_needed %}{{ ingredient_table(data.still_needed) }}{% else %}<p class="rm-small rm-muted mt-2">가진 재료로 만들 수 있어요.</p>{% endif %}
-      </div>
-    </div>
+    <h3 class="mt-4 mb-2">대체 제안</h3>
+    {% if data.substitutions %}
+      {{ substitution_list(data.substitutions) }}
+    {% else %}<p class="rm-small rm-muted">대체할 재료가 없어요.</p>{% endif %}
+    <h3 class="mt-4 mb-2">사야 할 재료</h3>
+    {% if data.still_needed %}
+      <p class="rm-small rm-muted mb-2">가진 재료로 대신할 수 없어서 따로 준비해야 하는 재료예요.</p>
+      {{ ingredient_table(data.still_needed) }}
+    {% else %}<p class="rm-small rm-muted">더 살 재료 없이 가진 재료로 만들 수 있어요.</p>{% endif %}
   {% endif %}
 
   <div class="rm-two mt-4">
