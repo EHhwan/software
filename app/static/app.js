@@ -261,14 +261,24 @@
   if (input) {
     var list = $('#ingredient-suggestions'), chips = $('#ingredient-chips'), error = $('#ingredient-error');
     var options = [], active = -1, timer = null, seq = 0;
-    var ALIAS = {'계란': '달걀', '에그': '달걀'};
+    var ALIAS = {'계란': '달걀', '에그': '달걀', '후춧가루': '후추', '통깨': '참깨'};  // recipe_util.ALIASES 와 맞춘다
     var norm = function (s) { s = s.replace(/\s+/g, ''); return ALIAS[s] || s; };
     var haveNames = function () { return $$('input[name=have]', chips).map(function (i) { return i.value; }); };
+    // 저장된 재료: 이번 재료로 또 넣으려 하면 넣지 않고 알려 준다 (다 떨어졌는데 저장 목록을 안 고친 경우를 위해)
+    var saved = [];
+    try { saved = JSON.parse($('#pantry-form').dataset.saved || '[]'); } catch (err) { saved = []; }
+    var savedName = function (name) { return saved.find(function (s) { return norm(s) === norm(name); }); };
+    function savedWarning(name) {
+      error.textContent = '‘' + name + '’은(는) 저장된 재료에 이미 있어요. 후보를 찾을 때 자동으로 함께 써요. 다 떨어졌다면 위 저장된 재료에서 ×로 지워 주세요.';
+      var chip = $$('.rm-saved-chip').find(function (c) { return norm(c.firstElementChild.textContent) === norm(name); });
+      if (chip) { chip.classList.remove('is-flash'); void chip.offsetWidth; chip.classList.add('is-flash'); }
+    }
 
     function addChip(name) {
       name = name.trim().replace(/\s+/g, ' ').slice(0, 40);
       if (!name) { error.textContent = '재료 이름을 입력해 주세요.'; return false; }
       name = ALIAS[name.replace(/\s+/g, '')] || name;
+      if (savedName(name)) { savedWarning(savedName(name)); return false; }
       if (haveNames().some(function (h) { return norm(h) === norm(name); })) { error.textContent = '이미 추가한 재료예요.'; return false; }
       var chip = document.createElement('span');
       chip.className = 'rm-chip rm-static';
@@ -295,8 +305,8 @@
     }
     function render(query, items) {
       var have = haveNames().map(norm);
-      options = items.map(function (o) { return {name: o.name, alias: o.alias, disabled: have.indexOf(norm(o.name)) >= 0}; });
-      if (!items.some(function (o) { return norm(o.name) === norm(query); })) options.push({name: query, custom: true, disabled: have.indexOf(norm(query)) >= 0});
+      options = items.map(function (o) { return {name: o.name, alias: o.alias, saved: !!savedName(o.name), disabled: have.indexOf(norm(o.name)) >= 0}; });
+      if (!items.some(function (o) { return norm(o.name) === norm(query); })) options.push({name: query, custom: true, saved: !!savedName(query), disabled: have.indexOf(norm(query)) >= 0});
       list.replaceChildren();
       options.forEach(function (o, i) {
         var li = document.createElement('li');
@@ -310,7 +320,7 @@
           if (o.alias) { var small = document.createElement('small'); small.textContent = '다른 이름: ' + o.alias; left.appendChild(small); }
         }
         var right = document.createElement('span'); right.className = 'rm-note-right';
-        right.textContent = o.disabled ? '이미 추가됨' : (o.custom ? '새 재료' : '추가');
+        right.textContent = o.saved ? '저장된 재료' : o.disabled ? '이미 추가됨' : (o.custom ? '새 재료' : '추가');
         li.append(left, right);
         li.addEventListener('pointerdown', function (e) { e.preventDefault(); });
         li.addEventListener('click', function () { if (o.disabled) { error.textContent = '이미 추가한 재료예요.'; return; } if (addChip(o.name)) { input.value = ''; hide(); input.focus(); } });
@@ -352,7 +362,7 @@
     chips.addEventListener('click', function (e) { var b = e.target.closest('[data-remove-chip]'); if (b) b.closest('[data-chip]').remove(); });
     $('#pantry-form').addEventListener('submit', function (e) {
       if (input.value.trim()) addTyped(input.value);
-      if (!haveNames().length) { e.preventDefault(); error.textContent = '재료를 한 개 이상 추가해 주세요.'; input.focus(); return; }
+      if (!haveNames().length && !saved.length) { e.preventDefault(); error.textContent = '재료를 한 개 이상 추가해 주세요.'; input.focus(); return; }
       input.disabled = true; // 칩으로 옮긴 재료가 add= 로 한 번 더 전송되지 않게
     });
   }

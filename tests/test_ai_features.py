@@ -174,7 +174,93 @@ def test_pantry_ranks_by_owned_ratio_and_skips_basic_seasonings(client, make_use
     page = client.get("/pantry?have=부추&have=마늘&have=달걀").get_data(as_text=True)
     assert page.index("부추 마늘 달걀전") < page.index("토마토 달걀볶음")
     assert "가진 재료 60% · 5가지 중 3가지" in page and "추가 2가지" in page
-    assert "기본 양념</strong>소금 · 참깨" in page
+    assert '기본 양념</strong><span class="">소금</span> · <span class="">참깨</span>' in page
+
+
+# ---------- 저장된 재료 ----------
+def _saved(app, uid):
+    from app.extensions import db
+    from app.models import PantryItem
+    with app.app_context():
+        return [p.name for p in db.session.scalars(db.select(PantryItem).filter_by(user_id=uid).order_by(PantryItem.id))]
+
+
+def test_save_and_delete_pantry_items(app, client, make_user):
+    uid = make_user()
+    login(client)
+    client.post("/pantry/saved", data={"add": "간장, 계란 , 간장"})
+    assert _saved(app, uid) == ["간장", "달걀"]  # 다른 이름(계란→달걀)으로 저장, 같은 재료는 한 번만
+    res = client.post("/pantry/saved", data={"add": "간장"}, follow_redirects=True)
+    assert "이미 저장된 재료예요: 간장" in res.get_data(as_text=True)
+    client.post("/pantry/saved/basics")
+    assert "소금" in _saved(app, uid) and _saved(app, uid).count("간장") == 1
+    from app.extensions import db
+    from app.models import PantryItem
+    with app.app_context():
+        item_id = db.session.scalar(db.select(PantryItem.id).filter_by(user_id=uid, name="달걀"))
+    client.post(f"/pantry/saved/{item_id}/delete")
+    assert "달걀" not in _saved(app, uid)
+
+
+def test_cannot_delete_others_pantry_item(app, client, make_user):
+    owner = make_user("owner01", "주인")
+    make_user()
+    login(client, "owner01")
+    client.post("/pantry/saved", data={"add": "버터"})
+    client.post("/logout")
+    login(client)
+    from app.extensions import db
+    from app.models import PantryItem
+    with app.app_context():
+        item_id = db.session.scalar(db.select(PantryItem.id).filter_by(user_id=owner))
+    assert client.post(f"/pantry/saved/{item_id}/delete").status_code == 404
+    assert _saved(app, owner) == ["버터"]
+
+
+def test_saved_items_join_search_and_are_marked(client, make_user, make_recipe):
+    uid = make_user()
+    make_recipe(uid, "부추 달걀전", ingredients=(("부추", 50, "g"), ("달걀", 2, "개"), ("밀가루", 3, "큰술"), ("소금", None, "약간")))
+    login(client)
+    client.post("/pantry/saved", data={"add": "달걀, 소금"})
+    page = client.get("/pantry?have=부추").get_data(as_text=True)
+    assert "부추 달걀전" in page
+    assert "넣은 재료</strong>부추" in page
+    assert "저장된 재료</strong>달걀" in page and "남아 있는지 확인" in page  # 저장된 재료로 맞춘 것은 따로 표시
+    assert "가진 재료 67% · 3가지 중 2가지" in page                          # 소금(기본 양념)은 비율 계산에서 뺀다
+    assert "✓ 소금" in page
+    # 저장된 재료만으로도 후보 찾기
+    assert "부추 달걀전" in client.get("/pantry?find=1").get_data(as_text=True)
+
+
+def test_adding_saved_item_again_warns(client, make_user, make_recipe):
+    uid = make_user()
+    make_recipe(uid, "달걀밥", ingredients=(("밥", 1, "공기"), ("달걀", 2, "개")))
+    login(client)
+    client.post("/pantry/saved", data={"add": "달걀"})
+    page = client.get("/pantry?have=계란&have=밥").get_data(as_text=True)
+    assert "‘달걀’은(는) 저장된 재료에 이미 있어요" in page or "‘계란’은(는) 저장된 재료에 이미 있어요" in page
+    assert 'name="have" value="달걀"' not in page  # 이번 재료 칩에는 다시 넣지 않는다
+    assert "저장된 재료</strong>달걀" in page
+
+
+def test_basic_seasonings_alone_find_nothing(client, make_user, make_recipe):
+    uid = make_user()
+    make_recipe(uid, "소금 달걀", ingredients=(("달걀", 2, "개"), ("소금", None, "약간")))
+    login(client)
+    client.post("/pantry/saved/basics")
+    assert "일치하는 후보가 없어요" in client.get("/pantry?find=1").get_data(as_text=True)
+
+
+def test_adapt_sends_saved_items_to_ai(client, make_user, make_recipe, fake_ai):
+    uid = make_user()
+    rid = make_recipe(uid, "달걀밥", ingredients=(("밥", 1, "공기"), ("달걀", 2, "개"), ("대파", 1, "대")))
+    login(client)
+    client.post("/pantry/saved", data={"add": "달걀"})
+    fake = fake_ai(ADAPT_ANSWER)
+    client.post("/pantry/adapt", data={"recipe_id": rid, "have": ["밥"]})
+    prompt = fake.prompts[-1]
+    owned_part = prompt.split("[보유 재료]")[1].split("[레시피에 있지만")[0]
+    assert "밥" in owned_part and "달걀" in owned_part  # 저장된 재료도 AI 에 '가진 재료'로 전달
 
 
 def test_ingredient_suggest(client, make_user, make_recipe):

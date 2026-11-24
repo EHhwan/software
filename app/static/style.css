@@ -401,6 +401,25 @@ mark.rm-ink { background: linear-gradient(transparent 30%, var(--rm-mint-tint) 3
 .rm-breakdown .rm-basic { font-size: 14px; color: var(--rm-muted); }
 .rm-caption-inline { font-size: 13px; color: var(--rm-caption); }
 .rm-breakdown strong { display: inline-block; min-width: 84px; font-weight: 600; font-size: 13px; color: var(--rm-muted); }
+.rm-check-tag { display: inline-block; margin-left: 6px; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; color: var(--rm-ochre-text); vertical-align: 2px; }
+.rm-basic-owned { color: var(--rm-mint-text); font-weight: 600; }
+
+/* 저장된 재료: 황토 틴트 (이번에 넣은 재료 칩과 구분) */
+.rm-saved-panel { border-top: 4px solid var(--rm-ochre); }
+.rm-saved-count { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 8px; margin-left: 4px; border-radius: 999px; background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; color: var(--rm-ochre-text); font-size: 14px; font-weight: 600; vertical-align: 3px; }
+.rm-saved-chips { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.rm-saved-chip { background: var(--rm-ochre-tint); border-color: #e3cc8b; padding-right: 4px; }
+.rm-saved-chip form { display: contents; }
+.rm-saved-chip button { border: 0; background: transparent; color: var(--rm-ochre-text); font-size: 18px; min-width: 32px; min-height: 32px; line-height: 1; border-radius: 50%; }
+.rm-saved-chip button:hover { background: #f1dfa9; }
+.rm-saved-chip.is-flash { animation: rm-flash 1.2s ease-out; }
+@keyframes rm-flash { 0%, 40% { box-shadow: 0 0 0 3px var(--rm-ochre); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.rm-saved-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rm-divider); }
+.rm-saved-add { display: flex; gap: 8px; flex: 1 1 320px; }
+.rm-saved-actions .rm-caption-inline { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.rm-field-warning { margin: 6px 0 0; font-size: 14px; font-weight: 500; color: var(--rm-ochre-text); }
+.rm-field-warning:empty { display: none; }
+.rm-field-warning:not(:empty) { padding: 10px 12px; background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; border-left: 4px solid var(--rm-ochre); border-radius: var(--rm-r-sm); }
 
 /* 대체 재료: [원래] → [대신 쓸 재료 + 배지] / 바뀌는 점 */
 .rm-subs { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }

@@ -191,3 +191,14 @@ class AICall(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
+
+
+class PantryItem(db.Model):
+    """사용자가 저장해 둔 재료 (집에 늘 있는 기본 양념·자주 쓰는 재료). 보유 재료 추천 때 자동으로 함께 쓴다."""
+    __tablename__ = "pantry_items"
+    __table_args__ = (db.UniqueConstraint("user_id", "name"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = db.Column(db.String(40), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)

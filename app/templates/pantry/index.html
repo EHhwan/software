@@ -9,10 +9,62 @@
   <p>보유 재료와 레시피를 비교해 만들기 쉬운 후보를 찾고, 부족한 재료는 AI가 대체 방법과 바뀐 조리법을 제안해요.</p>
 </div>
 
+{% macro keep_inputs() %}{% for h in have %}<input type="hidden" name="keep" value="{{ h }}">{% endfor %}{% if searched %}<input type="hidden" name="find" value="1">{% endif %}{% endmacro %}
+
 <div class="rm-workgrid">
   <div class="rm-stack">
-    <form class="rm-panel" method="get" action="{{ url_for('pantry.index') }}" id="pantry-form">
-      <h2>보유 재료</h2>
+    <section class="rm-panel rm-saved-panel" aria-labelledby="saved-title">
+      <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2">
+        <h2 id="saved-title">저장된 재료 {% if saved %}<span class="rm-saved-count">{{ saved|length }}</span>{% endif %}</h2>
+        <span class="rm-small rm-muted">집에 늘 있는 재료를 저장하면 후보를 찾을 때 자동으로 함께 써요.</span>
+      </div>
+      {% if current_user.is_authenticated %}
+        {% if saved %}
+        <ul class="rm-saved-chips" aria-label="저장된 재료">
+          {% for p in saved %}
+          <li class="rm-chip rm-saved-chip">
+            <span>{{ p.name }}</span>
+            <form method="post" action="{{ url_for('pantry.delete_item', item_id=p.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
+              <button aria-label="{{ p.name }} 저장 목록에서 지우기" title="다 떨어졌으면 지워 주세요">×</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="rm-small rm-muted mt-2">다 떨어진 재료는 ×로 지워 주세요. 지우지 않으면 계속 ‘가진 재료’로 계산돼요.</p>
+        {% else %}
+        <p class="rm-small rm-muted mt-2">아직 저장된 재료가 없어요. 소금·간장 같은 기본 양념이나 자주 쓰는 재료를 저장해 두세요.</p>
+        {% endif %}
+        <div class="rm-saved-actions">
+          <form method="post" action="{{ url_for('pantry.save_items') }}" class="rm-saved-add">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
+            <label class="rm-sr-only" for="saved-input">저장할 재료 이름</label>
+            <input id="saved-input" name="add" class="form-control" placeholder="저장할 재료 · 쉼표로 여러 개" maxlength="200" required>
+            <button class="rm-btn rm-btn-secondary">저장</button>
+          </form>
+          {% if basic_to_save %}
+          <form method="post" action="{{ url_for('pantry.save_basics') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
+            <button class="rm-btn rm-btn-secondary" title="{{ basic_to_save|join(', ') }}">기본 양념 한 번에 저장 <span class="rm-caption-inline">{{ basic_to_save|length }}개</span></button>
+          </form>
+          {% endif %}
+          {% if have %}
+          <form method="post" action="{{ url_for('pantry.save_items') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
+            {% for h in have %}<input type="hidden" name="have" value="{{ h }}">{% endfor %}
+            <button class="rm-btn rm-btn-secondary">이번에 넣은 재료도 저장 <span class="rm-caption-inline">{{ have|join(', ') }}</span></button>
+          </form>
+          {% endif %}
+        </div>
+      {% else %}
+        <p class="rm-small rm-muted mt-2"><a href="{{ url_for('auth.login', next=request.full_path) }}">로그인</a>하면 기본 양념이나 자주 쓰는 재료를 저장해 두고 매번 입력하지 않아도 돼요.</p>
+      {% endif %}
+    </section>
+
+    <form class="rm-panel" method="get" action="{{ url_for('pantry.index') }}" id="pantry-form"
+          data-saved="{{ saved|map(attribute='name')|list|tojson|forceescape }}">
+      <h2>이번에 넣을 재료</h2>
+      <input type="hidden" name="find" value="1">
       <div class="rm-field">
         <label class="form-label" for="ingredient-input">재료 이름</label>
         <div class="d-flex gap-2">
@@ -24,16 +76,18 @@
           </div>
           <button type="button" class="rm-btn rm-btn-secondary" id="ingredient-add">추가</button>
         </div>
-        <p class="invalid-feedback d-block" id="ingredient-error" aria-live="polite"></p>
+        <p class="rm-field-warning" id="ingredient-error" aria-live="polite"></p>
         <p class="rm-small rm-muted mt-1" id="ingredient-hint">일부 글자만 입력해도 후보를 보여 드려요. 목록에 없는 재료도 직접 추가할 수 있어요. (여러 개는 쉼표로 구분)</p>
       </div>
-      <div class="rm-chips" id="ingredient-chips" aria-label="추가한 재료">
+      <div class="rm-chips" id="ingredient-chips" aria-label="이번에 넣은 재료">
         {% for h in have %}
         <span class="rm-chip rm-static" data-chip><span>{{ h }}</span><input type="hidden" name="have" value="{{ h }}"><button type="button" aria-label="{{ h }} 삭제" data-remove-chip>×</button></span>
         {% endfor %}
       </div>
-      <p class="rm-small rm-muted mt-3">기본 양념(소금, 식용유 등)도 실제로 가진 경우에만 추가해 주세요.</p>
-      <button class="rm-btn mt-3">후보 찾기</button>
+      <div class="d-flex flex-wrap align-items-center gap-3 mt-3">
+        <button class="rm-btn">후보 찾기</button>
+        {% if saved %}<span class="rm-small rm-muted">저장된 재료 {{ saved|length }}개도 함께 써요.</span>{% endif %}
+      </div>
     </form>
 
     {% if searched %}
@@ -50,16 +104,17 @@
           <span class="rm-small rm-muted">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}</span>
         </div>
         <div class="rm-availability">
-          <span class="rm-available">가진 재료 {{ c.percent }}% · {{ c.has|length + c.missing|length }}가지 중 {{ c.has|length }}가지</span>
+          <span class="rm-available">가진 재료 {{ c.percent }}% · {{ c.total }}가지 중 {{ c.has_count }}가지</span>
           <span class="rm-missing">{{ '추가 %d가지'|format(c.missing|length) if c.missing else '바로 만들 수 있어요' }}</span>
         </div>
         <div class="rm-breakdown">
-          <p><strong>보유 재료</strong>{{ c.has|map(attribute='name')|join(' · ') }}</p>
+          {% if c.has %}<p><strong>넣은 재료</strong>{{ c.has|map(attribute='name')|join(' · ') }}</p>{% endif %}
+          {% if c.has_saved %}<p class="rm-from-saved"><strong>저장된 재료</strong>{{ c.has_saved|map(attribute='name')|join(' · ') }} <span class="rm-check-tag">남아 있는지 확인</span></p>{% endif %}
           <p><strong>추가 필요</strong>{% for i in c.missing %}{{ i.name }} {{ amount(i) }}{{ ' · ' if not loop.last }}{% else %}없음{% endfor %}</p>
-          {% if c.basic %}<p class="rm-basic"><strong>기본 양념</strong>{{ c.basic|map(attribute='name')|join(' · ') }} <span class="rm-caption-inline">(집에 있다고 보고 계산에서 뺐어요)</span></p>{% endif %}
+          {% if c.basic %}<p class="rm-basic"><strong>기본 양념</strong>{% for b in c.basic %}<span class="{{ 'rm-basic-owned' if b.owned }}">{{ '✓ ' if b.owned }}{{ b.i.name }}</span>{{ ' · ' if not loop.last }}{% endfor %} <span class="rm-caption-inline">(순위 계산에서 뺐어요{{ ', ✓ 는 저장된 양념' if c.basic|selectattr('owned')|list }})</span></p>{% endif %}
         </div>
         <div class="rm-end-row">
-          <button type="button" class="rm-btn rm-btn-secondary" data-copy-text="{{ r.title }} · 장보기 목록&#10;{% for i in c.missing %}□ {{ i.name }} {{ amount(i) }}&#10;{% else %}추가로 필요한 재료가 없어요.&#10;{% endfor %}{% if c.basic %}(기본 양념 확인: {{ c.basic|map(attribute='name')|join(', ') }}){% endif %}">장보기 목록 복사</button>
+          <button type="button" class="rm-btn rm-btn-secondary" data-copy-text="{{ r.title }} · 장보기 목록&#10;{% for i in c.missing %}□ {{ i.name }} {{ amount(i) }}&#10;{% else %}추가로 필요한 재료가 없어요.&#10;{% endfor %}{% set need_basic = c.basic|rejectattr('owned')|map(attribute='i')|map(attribute='name')|list %}{% if need_basic %}(기본 양념 확인: {{ need_basic|join(', ') }}){% endif %}">장보기 목록 복사</button>
           {% if current_user.is_authenticated %}
           <form method="post" action="{{ url_for('pantry.adapt') }}" data-loading-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -73,7 +128,7 @@
         </div>
       </article>
       {% else %}
-        <div class="mt-3">{{ empty("일치하는 후보가 없어요.", "재료를 더 추가하거나 다른 이름(예: 계란 → 달걀)으로 바꿔 보세요.") }}</div>
+        <div class="mt-3">{{ empty("일치하는 후보가 없어요.", "재료를 더 추가하거나 다른 이름(예: 계란 → 달걀)으로 바꿔 보세요. 기본 양념만으로는 후보를 찾지 않아요.") }}</div>
       {% endfor %}
     </section>
     {% endif %}
@@ -82,8 +137,8 @@
   <aside class="rm-panel">
     <h2>추천 과정</h2>
     <ol class="rm-small rm-muted mt-3 ps-3">
-      <li class="mb-2">보유 재료와 이름이 같은 재료가 있는 레시피를 찾아요. <span class="d-block">(일반 계산, 가진 재료 비율이 높은 순. 소금·간장 같은 기본 양념은 부족한 재료로 세지 않아요)</span></li>
-      <li class="mb-2">후보마다 가진 재료와 더 필요한 재료를 나눠 보여 줘요.</li>
+      <li class="mb-2">이번에 넣은 재료와 저장된 재료를 합쳐, 이름이 같은 재료가 있는 레시피를 찾아요. <span class="d-block">(일반 계산, 가진 재료 비율이 높은 순. 소금·간장 같은 기본 양념은 순위 계산에서 빼요)</span></li>
+      <li class="mb-2">후보마다 넣은 재료, 저장된 재료, 더 필요한 재료를 나눠 보여 줘요. 저장된 재료는 남아 있는지 한 번 확인해 주세요.</li>
       <li>원하는 후보를 고르면 AI가 대체 재료와 바뀐 조리법을 제안해요.</li>
     </ol>
     <p class="rm-small rm-muted mt-3">재료 일치율을 안전성이나 영양 점수로 표현하지 않아요.</p>
