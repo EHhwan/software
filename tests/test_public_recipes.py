@@ -40,6 +40,10 @@ def _ings(data):
     ("조랭이떡(70g)", ("조랭이떡", 70, "g")),           # 양이 괄호 안에만 있는 경우
     ("소금 약간", ("소금", None, "약간")),
     ("●참기름", ("참기름", None, "")),
+    ("날콩가루 7g(1⅓작은술)", ("날콩가루", 4 / 3, "작은술")),   # 원본의 특수 분수 글자
+    ("물 300ml(1½컵)", ("물", 1.5, "컵")),
+    ("황태(채) 15g(10개)", ("황태", 10, "개")),                 # 괄호가 두 개
+    ("오이 70g(1/3개)", ("오이", 70, "g")),                     # 0.33개보다 g 이 읽기 쉽다
 ])
 def test_parse_ingredient(token, expected):
     name, qty, unit = pr.parse_ingredient(token)
@@ -125,19 +129,44 @@ def test_fetch_page_reports_api_errors(monkeypatch):
 
 
 # ---------- 화면 ----------
-def test_browse_shows_public_after_community(client, make_user, make_recipe, imported):
+def test_browse_separates_community_and_public(client, make_user, make_recipe, imported):
     uid = make_user()
     make_recipe(uid, title="내가 쓴 볶음밥")
-    html = client.get("/").get_data(as_text=True)
-    assert html.index("내가 쓴 볶음밥") < html.index("새우 두부 계란찜")   # 공공 레시피가 더 나중에 들어와도 커뮤니티 레시피가 먼저
-    public_only = client.get("/?origin=public").get_data(as_text=True)
-    assert "내가 쓴 볶음밥" not in public_only and "공공 레시피" in public_only
-    ai_only = client.get("/?origin=ai").get_data(as_text=True)
-    assert "새우 두부 계란찜" not in ai_only
+    community = client.get("/").get_data(as_text=True)
+    # 기본 화면은 커뮤니티 레시피만: 공공 레시피 1,000여 개가 회원 레시피를 덮지 않게
+    assert "내가 쓴 볶음밥" in community and "새우 두부 계란찜" not in community
+    assert "1개" in community and "5개" in community  # 두 칸의 개수
+    public = client.get("/?source=public").get_data(as_text=True)
+    assert "새우 두부 계란찜" in public and "내가 쓴 볶음밥" not in public
+    assert "time-filter" not in public  # 공공 레시피에는 시간 정보가 없어 시간 조건을 숨긴다
+    assert "새우 두부 계란찜" in client.get("/?origin=public").get_data(as_text=True)  # 예전 주소도 공공 칸으로
+    assert "새우 두부 계란찜" not in client.get("/?origin=ai").get_data(as_text=True)
+
+
+def test_search_hints_other_source(client, make_user, make_recipe, imported):
+    uid = make_user()
+    make_recipe(uid, title="두부 김치", ingredients=(("두부", 1, "모"), ("김치", 100, "g")))
+    html = client.get("/?q=두부").get_data(as_text=True)
+    assert "두부 김치" in html and "공공 레시피에서 보기" in html  # 공공 레시피에도 두부 요리가 있다고 알려 준다
+    assert "새우 두부 계란찜" in client.get("/?q=두부&source=public").get_data(as_text=True)
+
+
+def test_real_api_sample_converts_cleanly():
+    """식품안전나라에서 실제로 받은 30개: 모두 변환되고, 재료량이 0.33 처럼 읽기 어려운 값이 없다."""
+    with open(os.path.join(os.path.dirname(__file__), "data", "cookrcp01_real30.json"), encoding="utf-8") as f:
+        real = json.load(f)
+    for row in real:
+        data = pr.convert_row(row)
+        assert data and data["ingredients"] and data["steps"], row["RCP_NM"]
+        for i in data["ingredients"]:
+            assert i["name"] and len(i["name"]) <= 40
+            if i["quantity"] is not None and i["unit"] not in ("g", "ml"):
+                assert (i["quantity"] * 2).is_integer() or i["quantity"] >= 1, (row["RCP_NM"], i)
 
 
 def test_time_filter_excludes_unknown_time(client, imported):
     assert "새우 두부 계란찜" not in client.get("/?time=30").get_data(as_text=True)
+    assert "새우 두부 계란찜" in client.get("/?time=30&source=public").get_data(as_text=True)  # 공공 칸에서는 시간 조건을 무시
 
 
 def test_detail_shows_source_and_nutrition(app, client, imported):
@@ -150,7 +179,7 @@ def test_detail_shows_source_and_nutrition(app, client, imported):
 
 
 def test_search_by_ingredient_finds_public(client, imported):
-    assert "부추 콩가루 찜" in client.get("/?q=콩가루").get_data(as_text=True)
+    assert "부추 콩가루 찜" in client.get("/?q=콩가루&source=public").get_data(as_text=True)
 
 
 def test_pantry_candidates_include_public_and_prep_words(client, imported):

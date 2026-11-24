@@ -65,7 +65,15 @@ def fetch_rows(key, limit=None):
 # ---------- 2) 우리 형식으로 바꾸기 ----------
 NO_AMOUNT = ("약간", "적당량", "적량", "조금", "소량", "少")
 HOME_UNITS = WHOLE_UNITS | HALF_UNITS
-_NUMBER = r"\d+(?:\.\d+)?(?:\s*/\s*\d+)?"
+_NUMBER = r"(?:\d+\s+)?\d+(?:\.\d+)?(?:\s*/\s*\d+)?"   # 2, 0.5, 1/2, 1 1/3
+_FRACTIONS = {"½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4", "¾": "3/4", "⅕": "1/5", "⅛": "1/8"}
+
+
+def _plain_fractions(text):
+    """'1⅓작은술' → '1 1/3작은술', '½컵' → '1/2컵' (원본에 특수 분수 글자가 섞여 있다)"""
+    for ch, frac in _FRACTIONS.items():
+        text = re.sub(rf"(\d){ch}", rf"\1 {frac}", text).replace(ch, frac)
+    return text
 
 
 def _split_outside_parens(line):
@@ -91,7 +99,7 @@ def _amount(text):
     m = re.match(rf"^({_NUMBER})\s*([^\d()]*)$", text)
     if m:
         try:
-            return parse_quantity(m.group(1).replace(" ", "")), m.group(2).strip()[:20]
+            return parse_quantity(m.group(1)), m.group(2).strip()[:20]
         except ValueError:
             return None
     if text in NO_AMOUNT:
@@ -101,7 +109,7 @@ def _amount(text):
 
 def parse_ingredient(token):
     """재료 한 개: '연두부 75g(3/4모)', '조랭이떡(70g)', '소금 약간', '참기름' → (이름, 양, 단위) 또는 None"""
-    token = re.sub(r"^[●•·\-*▶◆■□○◎]+", "", token).strip()
+    token = _plain_fractions(re.sub(r"^[●•·\-*▶◆■□○◎]+", "", token).strip())
     if not token:
         return None
     # '이름(70g)' : 양이 괄호 안에 있는 경우
@@ -115,13 +123,15 @@ def parse_ingredient(token):
     m = re.match(rf"^(.+?)\s*({_NUMBER})\s*([^\d]*)$", base)
     if m and not re.search(r"\d", m.group(3)):
         try:
-            name, qty, unit = _clean_name(m.group(1)), parse_quantity(m.group(2).replace(" ", "")), m.group(3).strip()[:20]
+            name, qty, unit = _clean_name(m.group(1)), parse_quantity(m.group(2)), m.group(3).strip()[:20]
         except ValueError:
             name = None
         if name:
-            paren = re.search(r"\(([^()]*)\)", token)
-            home = _amount(paren.group(1).split(",")[0]) if paren else None
-            if home and home[0] is not None and home[1] in HOME_UNITS:
+            # 괄호가 여럿이면('황태(채) 15g(10개)') 숫자가 든 마지막 괄호를 본다.
+            # '오이 70g(1/3개)' 처럼 개수가 1/2 가 아닌 소수(0.33개)로 나오면 g 이 더 읽기 쉬워 그대로 둔다.
+            parens = [p for p in re.findall(r"\(([^()]*)\)", token) if re.search(r"\d", p)]
+            home = _amount(parens[-1].split(",")[0]) if parens else None
+            if home and home[0] is not None and home[1] in HOME_UNITS and (home[1] in HALF_UNITS or home[0] >= 1 or home[0] == 0.5):
                 return name, home[0], home[1]
             return name, qty, unit
     words = base.split()

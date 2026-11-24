@@ -3,7 +3,7 @@
 {% block title %}레시피 둘러보기 · {{ SERVICE_NAME }}{% endblock %}
 
 {% block content %}
-{% if not filtered and page.page == 1 %}
+{% if not filtered and page.page == 1 and filters.source == 'community' %}
 <section class="rm-hero">
   <div>
     <div class="rm-eyebrow">레시피 믹스 · 매일의 요리</div>
@@ -29,12 +29,22 @@
 <div class="rm-section-top">
   <h2>레시피 둘러보기</h2>
   <form class="rm-searchbar" method="get" action="{{ url_for('main.index') }}" role="search">
-    {% for key in ('category', 'time', 'origin', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+    {% for key in ('source', 'category', 'time', 'origin', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
     <input class="form-control" type="search" name="q" value="{{ filters.q }}" maxlength="40" aria-label="레시피 검색" placeholder="요리 이름이나 재료로 검색">
     <button class="rm-btn rm-btn-secondary">검색</button>
   </form>
   <a href="{{ url_for('recipes.new') }}" class="rm-btn">레시피 등록</a>
 </div>
+
+<nav class="rm-source-switch" aria-label="레시피 출처">
+  {% for key, label in sources.items() %}
+  <a href="{{ url_with(source=None if key == 'community' else key, origin=None, time=None) }}" {{ 'aria-current=page' if filters.source == key }}>
+    <span class="rm-source-name">{{ label }}</span>
+    <span class="rm-source-desc">{{ '회원이 직접 올리거나 AI로 만든 레시피' if key == 'community' else '식품의약품안전처 레시피 DB' }}</span>
+    <span class="rm-source-total">{{ totals[key] }}개</span>
+  </a>
+  {% endfor %}
+</nav>
 
 <div class="rm-filter-toolbar">
   <div class="rm-category-list" aria-label="요리 종류">
@@ -43,7 +53,8 @@
     {% endfor %}
   </div>
   <form class="rm-filter-selects" method="get" action="{{ url_for('main.index') }}" data-autosubmit>
-    {% for key in ('q', 'category', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+    {% for key in ('q', 'source', 'category', 'sort') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+    {% if filters.source == 'community' %}
     <div>
       <label class="form-label" for="time-filter">조리 시간</label>
       <select class="form-select" id="time-filter" name="time">
@@ -56,8 +67,11 @@
         {% for key, label in origin_filters.items() %}<option value="{{ key }}" {{ 'selected' if filters.origin == key }}>{{ label }}</option>{% endfor %}
       </select>
     </div>
+    {% else %}
+    <p class="rm-small rm-muted mb-0">식품안전나라 ‘조리식품의 레시피 DB’에서 가져온 레시피예요. 원본에 조리 시간이 없어 시간 조건은 쓸 수 없어요. AI 레시피 믹스와 보유 재료 추천에도 쓸 수 있어요.</p>
+    {% endif %}
     <noscript><button class="rm-btn rm-btn-secondary">적용</button></noscript>
-    {% if filtered %}<a class="rm-btn rm-btn-quiet" href="{{ url_for('main.index', sort=filters.sort if filters.sort == 'popular' else None) }}">검색·필터 초기화</a>{% endif %}
+    {% if filtered %}<a class="rm-btn rm-btn-quiet" href="{{ url_for('main.index', source=filters.source if filters.source == 'public' else None, sort=filters.sort if filters.sort == 'popular' else None) }}">검색·필터 초기화</a>{% endif %}
   </form>
 </div>
 
@@ -67,8 +81,15 @@
   <span class="rm-count">{{ page.total }}개</span>
 </div>
 
+{% set other = 'public' if filters.source == 'community' else 'community' %}
+{% if filters.q and totals[other] %}
+<p class="rm-subtle mb-3">‘{{ filters.q }}’ 검색 결과가 {{ sources[other] }}에도 {{ totals[other] }}개 있어요. <a href="{{ url_with(source=None if other == 'community' else other, origin=None, time=None) }}">{{ sources[other] }}에서 보기 →</a></p>
+{% endif %}
+
 {% call recipe_grid(recipes, likes, liked, marked) %}
-  {% if filtered %}
+  {% if filters.source == 'public' and not filtered %}
+    {{ empty("아직 가져온 공공 레시피가 없어요.", "관리자가 식품안전나라 인증키를 설정하면 서버를 켤 때 자동으로 가져와요.") }}
+  {% elif filtered %}
     {{ empty("조건에 맞는 레시피가 없어요.", "검색어나 요리 종류·조리 시간 조건을 바꿔 보세요.", url_for('main.index'), "검색·필터 초기화") }}
   {% else %}
     {{ empty("아직 등록된 레시피가 없어요.", "자주 해 먹는 요리부터 올려 보세요. 다른 사람이 AI 믹스 재료로 쓸 수 있어요.", url_for('recipes.new'), "첫 레시피 등록하기") }}

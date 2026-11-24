@@ -380,3 +380,13 @@ mark.rm-ink { background: linear-gradient(transparent 28%, var(--rm-add) 28%, va
   .rm-cook-step { font-size: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* 둘러보기: 커뮤니티 레시피 / 공공 레시피 전환 */
+.rm-source-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+.rm-source-switch a { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 14px 18px; border: 1px solid var(--rm-line-2); border-radius: 10px; background: #fff; color: var(--rm-ink); text-decoration: none; }
+.rm-source-switch a:hover { background: #f6f8f2; }
+.rm-source-switch a[aria-current="page"] { border-color: var(--rm-olive); background: #e9efe1; box-shadow: inset 0 0 0 1px var(--rm-olive); }
+.rm-source-name { font-weight: 700; font-size: 16px; }
+.rm-source-desc { grid-column: 1; font-size: 13px; color: var(--rm-muted); }
+.rm-source-total { grid-column: 2; grid-row: 1 / span 2; font-size: 15px; font-weight: 650; color: var(--rm-olive); }
+@media (max-width: 560px) { .rm-source-switch a { padding: 12px 14px; } .rm-source-desc { display: none; } }
