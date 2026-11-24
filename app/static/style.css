@@ -30,6 +30,8 @@
   --rm-ochre: #e8b94a;    --rm-ochre-tint: #f9efd3;    --rm-ochre-text: #694c05;
   --rm-mint: #a4d4c5;     --rm-mint-tint: #e6f3ee;     --rm-mint-text: #1f5446;
   --rm-coral: #ff6b5a;
+  --rm-star: #f5b301;           /* 즐겨찾기 별 (노랑) */
+  --rm-like: #e0383e;           /* 좋아요 하트 (빨강) */
   --rm-primary: #141310;       /* 주 버튼 */
   --rm-danger: #b3261e;
   /* 그림자 (따뜻한 갈색 계열, 낮은 투명도) */
@@ -231,7 +233,11 @@ textarea.form-control { min-height: 96px; }
 .rm-card .rm-meta { display: flex; gap: 16px; align-items: center; border-top: 1px solid var(--rm-divider); padding-top: 10px; margin-top: auto; }
 .rm-card-bookmark { position: relative; z-index: 2; margin-left: auto; border: 1px solid var(--rm-line); background: var(--rm-surface); min-width: 44px; min-height: 44px; border-radius: var(--rm-r-md); color: var(--rm-ink); font-size: 18px; line-height: 1; transition: border-color .15s ease-out, background .15s ease-out; }
 .rm-card-bookmark:hover { border-color: #8f877a; }
-.rm-card-bookmark[aria-pressed="true"] { background: var(--rm-ochre-tint); border-color: var(--rm-ochre); color: var(--rm-ochre-text); }
+.rm-card-bookmark[aria-pressed="true"] { border-color: var(--rm-ochre); }
+/* 즐겨찾기: 누르면 노란 별, 좋아요: 누르면 빨간 하트 (테두리를 둘러 크림 바탕에서도 또렷하게) */
+.rm-star { display: inline-block; line-height: 1; }
+[aria-pressed="true"] > .rm-star { color: var(--rm-star); -webkit-text-stroke: .6px #a87800; }
+[aria-pressed="true"] > [data-like-icon] { color: var(--rm-like); }
 .rm-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px; }
 
 /* 정보 줄: 선 아이콘 + 진한 숫자 + 연한 단위 */
@@ -240,7 +246,7 @@ textarea.form-control { min-height: 96px; }
 .rm-meta-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .rm-meta-item svg { width: 16px; height: 16px; flex: none; color: var(--rm-caption); }
 .rm-meta-item b { margin-right: 1px; font-size: 16px; font-weight: 600; color: var(--rm-ink); font-variant-numeric: tabular-nums; }
-.rm-meta-item.liked svg { color: var(--rm-pink); fill: currentColor; }
+.rm-meta-item.liked svg { color: var(--rm-like); fill: currentColor; }
 
 /* ---------- 분량 [− 2인분 +] ---------- */
 .rm-serving-row { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }

@@ -155,8 +155,9 @@
         .then(function (data) {
           btn.setAttribute('aria-pressed', String(data.on));
           if (form.dataset.ajaxToggle === 'bookmark') {
-            if (btn.classList.contains('rm-card-bookmark')) btn.textContent = data.on ? '★' : '☆';
-            else btn.textContent = data.on ? '★ 즐겨찾기 해제' : '☆ 즐겨찾기';
+            $('.rm-star', btn).textContent = data.on ? '★' : '☆';
+            var label = $('[data-bookmark-label]', btn);
+            if (label) label.textContent = data.on ? '즐겨찾기 해제' : '즐겨찾기';
           } else {
             $('[data-like-icon]', btn).textContent = data.on ? '♥' : '♡';
             $$('[data-like-count]').forEach(function (el) { el.textContent = data.count; });

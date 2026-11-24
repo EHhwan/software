@@ -20,7 +20,7 @@
 <form method="post" action="{{ url_for('recipes.bookmark', recipe_id=r.id) }}" data-ajax-toggle="bookmark" class="d-contents" style="display:contents">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="next" value="{{ request.full_path }}">
-  <button class="{{ cls }}" aria-pressed="{{ 'true' if marked else 'false' }}" aria-label="{{ r.title }} 즐겨찾기{{ ' 해제' if marked }}">{% if cls == 'rm-card-bookmark' %}{{ '★' if marked else '☆' }}{% else %}{{ '★ 즐겨찾기 해제' if marked else '☆ 즐겨찾기' }}{% endif %}</button>
+  <button class="{{ cls }}" aria-pressed="{{ 'true' if marked else 'false' }}" aria-label="{{ r.title }} 즐겨찾기{{ ' 해제' if marked }}"><span class="rm-star" aria-hidden="true">{{ '★' if marked else '☆' }}</span>{% if cls != 'rm-card-bookmark' %} <span data-bookmark-label>{{ '즐겨찾기 해제' if marked else '즐겨찾기' }}</span>{% endif %}</button>
 </form>
 {% else %}
 <a class="{{ cls }} d-inline-grid" style="place-items:center" href="{{ url_for('auth.login', next=request.full_path) }}" aria-label="로그인하고 즐겨찾기">{{ '☆' if cls == 'rm-card-bookmark' else '☆ 즐겨찾기' }}</a>
