@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ SERVICE_NAME }}{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%230a0a0a' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='13' cy='18' r='9'/%3E%3Cpath d='M20 11.5 29 4'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -14,7 +15,7 @@
 
 <header class="rm-header">
   <nav class="rm-nav" aria-label="주 메뉴">
-    <a href="{{ url_for('main.index') }}" class="rm-brand"><span class="rm-brand-mark" aria-hidden="true"></span>{{ SERVICE_NAME }}</a>
+    <a href="{{ url_for('main.index') }}" class="rm-brand"><svg class="rm-brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="18" r="9"/><path d="M20 11.5 29 4"/><path d="M8.5 16.5a5 5 0 0 1 4-3.5"/></svg>{{ SERVICE_NAME }}</a>
     <div class="rm-navlinks">
       <a class="rm-navlink {{ 'active' if nav in ('main.index', 'recipes.detail') }}" href="{{ url_for('main.index') }}"
          {{ 'aria-current=page' if nav == 'main.index' }}>레시피 둘러보기</a>
@@ -53,7 +54,7 @@
 <footer class="rm-footer">
   <div class="rm-footer-inner">
     <div>
-      <a href="{{ url_for('main.index') }}" class="rm-brand"><span class="rm-brand-mark" aria-hidden="true"></span>{{ SERVICE_NAME }}</a>
+      <a href="{{ url_for('main.index') }}" class="rm-brand"><svg class="rm-brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="18" r="9"/><path d="M20 11.5 29 4"/><path d="M8.5 16.5a5 5 0 0 1 4-3.5"/></svg>{{ SERVICE_NAME }}</a>
       <p>AI가 만든 레시피는 실제 조리 결과를 보장하지 않아요. 재료 분량과 순서를 검토한 뒤 만들어 주세요.</p>
     </div>
     <div>

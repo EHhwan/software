@@ -78,8 +78,8 @@ a { text-decoration: none; color: var(--rm-ink); }
 .rm-nav { max-width: 1360px; margin: auto; min-height: 56px; padding: 6px 24px; display: flex; align-items: center; gap: 28px; }
 .rm-brand { font-size: 19px; letter-spacing: -.04em; font-weight: 600; display: flex; align-items: center; gap: 9px; white-space: nowrap; color: var(--rm-display); }
 .rm-brand:hover { color: var(--rm-display); }
-.rm-brand-mark { width: 26px; height: 26px; border-radius: 9px; background: var(--rm-peach); border: 1px solid rgba(0, 0, 0, .08); position: relative; flex: none; box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .06); }
-.rm-brand-mark::after { content: ""; position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--rm-lavender); border: 1px solid rgba(0, 0, 0, .08); right: -4px; bottom: -4px; }
+/* 로고: 후라이팬을 펜으로 그린 듯한 선 아이콘 (안은 비움) */
+.rm-brand-mark { width: 28px; height: 28px; flex: none; color: var(--rm-display); }
 .rm-navlinks { display: flex; gap: 4px; flex: 1; }
 .rm-navlink { min-height: 40px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: var(--rm-r-sm); color: var(--rm-muted); font-size: 14px; font-weight: 500; }
 .rm-navlink:hover { color: var(--rm-ink); background: var(--rm-soft); }
