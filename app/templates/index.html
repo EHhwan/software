@@ -21,8 +21,25 @@
       <span aria-hidden="true">＋</span>
       <div class="rm-note"><div class="rm-small rm-muted">다른 사람의 레시피</div><h3>버섯 크림 리소토</h3><div class="rm-small rm-muted mt-1">버섯 · 우유 · 치즈</div></div>
     </div>
-    <div class="rm-result-note"><span class="rm-badge rm-badge-ai">AI 조합</span><h3 class="mt-2">버섯 크림 김치볶음밥</h3><p class="rm-small mt-1">김치의 산미에 크림의 부드러움을 더한 조합</p></div>
+    <div class="rm-result-note"><span class="rm-badge rm-badge-ai">AI 조합</span><h3 class="mt-2">버섯 크림 김치볶음밥</h3><p class="rm-small mt-1 rm-muted">김치의 산미에 크림의 부드러움을 더한 조합</p></div>
   </div>
+</section>
+<section class="rm-feature-row" aria-label="주요 기능">
+  <a class="rm-feature rm-feature-lavender" href="{{ url_for('mix.index') }}">
+    <h3>AI 레시피 믹스</h3>
+    <p>내 레시피와 다른 사람의 레시피를 골라 원하는 방향으로 합쳐요. 바뀐 재료와 이유를 함께 보여 줘요.</p>
+    <span class="rm-feature-go">조합하러 가기 →</span>
+  </a>
+  <a class="rm-feature rm-feature-peach" href="{{ url_for('pantry.index') }}">
+    <h3>보유 재료 추천</h3>
+    <p>가진 재료로 만들 수 있는 레시피를 찾고, 없는 재료는 AI가 가진 재료로 바꿔 줘요.</p>
+    <span class="rm-feature-go">재료 넣어 보기 →</span>
+  </a>
+  <a class="rm-feature rm-feature-mint" href="{{ url_for('main.index', source='public') }}">
+    <h3>공공 레시피 {{ totals.public }}개</h3>
+    <p>식품의약품안전처 레시피를 영양 정보와 함께 보고, 믹스와 재료 추천에도 쓸 수 있어요.</p>
+    <span class="rm-feature-go">공공 레시피 보기 →</span>
+  </a>
 </section>
 {% endif %}
 

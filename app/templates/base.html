@@ -50,7 +50,29 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer class="rm-footer">{{ SERVICE_NAME }} · AI가 만든 레시피는 실제 조리 결과를 보장하지 않아요. 재료 분량과 순서를 검토한 뒤 만들어 주세요.</footer>
+<footer class="rm-footer">
+  <div class="rm-footer-inner">
+    <div>
+      <a href="{{ url_for('main.index') }}" class="rm-brand"><span class="rm-brand-mark" aria-hidden="true"></span>{{ SERVICE_NAME }}</a>
+      <p>AI가 만든 레시피는 실제 조리 결과를 보장하지 않아요. 재료 분량과 순서를 검토한 뒤 만들어 주세요.</p>
+    </div>
+    <div>
+      <h2>기능</h2>
+      <ul>
+        <li><a href="{{ url_for('main.index') }}">레시피 둘러보기</a></li>
+        <li><a href="{{ url_for('mix.index') }}">AI 레시피 믹스</a></li>
+        <li><a href="{{ url_for('pantry.index') }}">보유 재료 추천</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>데이터 출처</h2>
+      <ul>
+        <li><a href="{{ url_for('main.index', source='public') }}">공공 레시피</a>: 식품의약품안전처 조리식품의 레시피 DB (식품안전나라)</li>
+        <li>AI: Google Gemini API</li>
+      </ul>
+    </div>
+  </div>
+</footer>
 <div id="rm-toast" class="rm-toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

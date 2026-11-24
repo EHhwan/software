@@ -5,6 +5,14 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
 
+  // ---------- 상단 메뉴: 스크롤하면 그림자로 본문과 구분 ----------
+  var header = $('.rm-header');
+  if (header) {
+    var onScroll = function () { header.classList.toggle('is-scrolled', window.scrollY > 4); };
+    window.addEventListener('scroll', onScroll, {passive: true});
+    onScroll();
+  }
+
   // ---------- 알림 ----------
   var toastTimer;
   function toast(message) {
