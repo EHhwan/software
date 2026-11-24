@@ -82,7 +82,10 @@ def index():
     else:
         stmt = stmt.order_by(Recipe.created_at.desc(), Recipe.id.desc())
 
-    page = db.paginate(stmt, page=request.args.get("page", 1, type=int), per_page=PER_PAGE, error_out=False)
+    page_no = max(1, request.args.get("page", 1, type=int) or 1)
+    page = db.paginate(stmt, page=page_no, per_page=PER_PAGE, error_out=False)
+    if page.pages and page_no > page.pages:  # 없는 페이지 번호를 넣으면 마지막 페이지로
+        page = db.paginate(stmt, page=page.pages, per_page=PER_PAGE, error_out=False)
     # 칸 이름 옆에 보여 줄 개수 (검색어·요리 종류는 두 칸에 똑같이 적용)
     totals = {"community": _count(_browse_query("community", q, category, 0, "all")),
               "public": _count(_browse_query("public", q, category, 0, "all"))}

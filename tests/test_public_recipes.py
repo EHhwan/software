@@ -252,3 +252,22 @@ def test_search_ignores_spaces(client, make_user, make_recipe, imported):
     assert "새우 두부 계란찜" in client.get("/?q=두부 계란&source=public").get_data(as_text=True)
     assert "김치 볶음밥" in client.get("/?q=김치볶음밥").get_data(as_text=True)
     assert "김치 볶음밥" in client.get("/?q=묵은김치").get_data(as_text=True)  # 재료 이름도 띄어쓰기 무시
+
+
+def test_page_jump_keeps_filters_and_clamps(app, client):
+    rows = []
+    with open(SAMPLE, encoding="utf-8") as f:
+        base = json.load(f)[0]
+    for n in range(30):  # 30개 → 12개씩 3쪽
+        r = dict(base)
+        r["RCP_SEQ"], r["RCP_NM"] = str(1000 + n), f"공공 레시피 {n:02d}"
+        rows.append(r)
+    with app.app_context():
+        pr.import_rows(rows)
+    first = client.get("/?source=public").get_data(as_text=True)
+    assert 'name="page" min="1" max="3"' in first and "/ 3쪽" in first
+    assert '<input type="hidden" name="source" value="public">' in first  # 이동해도 공공 칸 그대로
+    third = client.get("/?source=public&page=3").get_data(as_text=True)
+    assert "공공 레시피 29" in third
+    assert "공공 레시피 29" in client.get("/?source=public&page=99").get_data(as_text=True)  # 없는 쪽 → 마지막 쪽
+    assert "공공 레시피 00" in client.get("/?source=public&page=-5").get_data(as_text=True)  # 0 이하 → 첫 쪽

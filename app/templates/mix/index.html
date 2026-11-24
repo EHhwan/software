@@ -8,13 +8,13 @@
   {% if r %}
     <div class="rm-selected-name" id="{{ kind }}-name">{{ r.title }}</div>
     <div class="rm-small rm-muted" id="{{ kind }}-meta">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}</div>
-    <button type="button" class="rm-btn rm-btn-secondary rm-btn-wide mt-3" data-open-dialog="{{ kind }}-dialog" {{ 'disabled' if list|length < 2 }}>다른 레시피 선택</button>
+    <div class="rm-card-action"><button type="button" class="rm-btn rm-btn-secondary rm-btn-wide" data-open-dialog="{{ kind }}-dialog" {{ 'disabled' if list|length < 2 }}>다른 레시피 선택</button></div>
   {% elif kind == 'own' %}
     <p class="mt-2">아직 내 레시피가 없어요.</p>
-    <a class="rm-btn rm-btn-secondary rm-btn-wide mt-3" href="{{ url_for('recipes.new') }}">레시피 등록하기</a>
+    <div class="rm-card-action"><a class="rm-btn rm-btn-secondary rm-btn-wide" href="{{ url_for('recipes.new') }}">레시피 등록하기</a></div>
   {% else %}
     <p class="mt-2">아직 다른 사람이 공개한 레시피가 없어요.</p>
-    <a class="rm-btn rm-btn-secondary rm-btn-wide mt-3" href="{{ url_for('main.index') }}">레시피 둘러보기</a>
+    <div class="rm-card-action"><a class="rm-btn rm-btn-secondary rm-btn-wide" href="{{ url_for('main.index') }}">레시피 둘러보기</a></div>
   {% endif %}
 </div>
 {% endmacro %}

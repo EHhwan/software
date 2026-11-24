@@ -251,7 +251,11 @@ textarea.form-control { min-height: 96px; }
 .rm-star { display: inline-block; line-height: 1; }
 [aria-pressed="true"] > .rm-star { color: var(--rm-star); -webkit-text-stroke: .6px #a87800; }
 [aria-pressed="true"] > [data-like-icon] { color: var(--rm-like); }
-.rm-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px; }
+.rm-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.rm-page-jump { display: flex; align-items: center; gap: 8px; }
+.rm-page-jump .form-control { width: 84px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rm-page-total { font-size: 15px; color: var(--rm-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .rm-page-edge { display: none; } .rm-page-jump { order: -1; width: 100%; justify-content: center; } }
 
 /* 정보 줄: 선 아이콘 + 진한 숫자 + 연한 단위 */
 .rm-meta, .rm-meta-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; color: var(--rm-caption); }
@@ -323,7 +327,8 @@ textarea.form-control { min-height: 96px; }
 
 /* ---------- AI 믹스 ---------- */
 .rm-selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.rm-selectcard { border: 1px solid var(--rm-line); border-radius: var(--rm-r-md); padding: 16px 18px; background: var(--rm-surface); box-shadow: var(--rm-shadow-sm); }
+.rm-selectcard { display: flex; flex-direction: column; border: 1px solid var(--rm-line); border-radius: var(--rm-r-md); padding: 16px 18px; background: var(--rm-surface); box-shadow: var(--rm-shadow-sm); }
+.rm-card-action { margin-top: auto; padding-top: 16px; }  /* 나란한 카드의 버튼을 늘 맨 아래 같은 높이에 */
 .rm-selectcard:first-child { border-top: 4px solid var(--rm-peach); }
 .rm-selectcard:last-child { border-top: 4px solid var(--rm-mint); }
 .rm-selectcard .rm-selected-name { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin: 6px 0 2px; overflow-wrap: anywhere; color: var(--rm-ink); }

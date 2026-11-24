@@ -119,9 +119,22 @@
 
 {% if page.pages > 1 %}
 <nav class="rm-pagination" aria-label="페이지">
-  {% if page.has_prev %}<a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.prev_num) }}">이전</a>{% endif %}
-  <span class="rm-btn rm-btn-quiet" aria-current="page">{{ page.page }} / {{ page.pages }}</span>
-  {% if page.has_next %}<a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.next_num) }}">다음</a>{% endif %}
+  {% if page.has_prev %}
+    <a class="rm-btn rm-btn-secondary rm-page-edge" href="{{ url_with(page=1) }}" aria-label="첫 페이지">« 처음</a>
+    <a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.prev_num) }}">이전</a>
+  {% endif %}
+  {# 페이지 번호를 입력해 바로 이동 (공공 레시피는 90쪽이 넘어서 이전·다음만으로는 힘들다) #}
+  <form class="rm-page-jump" method="get" action="{{ url_for('main.index') }}">
+    {% for key, values in request.args.lists() if key != 'page' %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endfor %}
+    <label class="rm-sr-only" for="page-jump">이동할 페이지 (1~{{ page.pages }})</label>
+    <input id="page-jump" class="form-control" type="number" name="page" min="1" max="{{ page.pages }}" value="{{ page.page }}" inputmode="numeric" required>
+    <span class="rm-page-total">/ {{ page.pages }}쪽</span>
+    <button class="rm-btn rm-btn-secondary">이동</button>
+  </form>
+  {% if page.has_next %}
+    <a class="rm-btn rm-btn-secondary" href="{{ url_with(page=page.next_num) }}">다음</a>
+    <a class="rm-btn rm-btn-secondary rm-page-edge" href="{{ url_with(page=page.pages) }}" aria-label="마지막 페이지">마지막 »</a>
+  {% endif %}
 </nav>
 {% endif %}
 {% endblock %}
