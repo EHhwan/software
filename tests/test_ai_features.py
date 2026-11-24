@@ -161,7 +161,20 @@ def test_pantry_candidates_by_code(client, make_user, make_recipe):
     make_recipe(u, "국수", ingredients=(("국수", 100, "g"),))
     page = client.get("/pantry?have=계란&have=밥").get_data(as_text=True)   # 계란 → 달걀
     assert page.index("달걀밥") < page.index("달걀 토마토") and ">국수</a>" not in page
-    assert "2가지 중 2가지 보유" in page and "토마토 1개" in page
+    assert "가진 재료 100% · 2가지 중 2가지" in page and "토마토 1개" in page
+
+
+def test_pantry_ranks_by_owned_ratio_and_skips_basic_seasonings(client, make_user, make_recipe):
+    u = make_user()
+    # 재료가 적어 '부족한 개수'는 적지만 가진 재료는 하나뿐 (비율 1/3)
+    make_recipe(u, "토마토 달걀볶음", ingredients=(("토마토", 2, "개"), ("달걀", 3, "개"), ("버터", 10, "g")))
+    # 부족한 재료는 더 많지만 가진 재료가 셋 (비율 3/5), 기본 양념(소금·참깨)은 세지 않는다
+    make_recipe(u, "부추 마늘 달걀전", ingredients=(("부추", 50, "g"), ("다진 마늘", 1, "작은술"), ("달걀", 2, "개"),
+                                                  ("밀가루", 3, "큰술"), ("양파", 0.5, "개"), ("소금", None, "약간"), ("참깨", None, "약간")))
+    page = client.get("/pantry?have=부추&have=마늘&have=달걀").get_data(as_text=True)
+    assert page.index("부추 마늘 달걀전") < page.index("토마토 달걀볶음")
+    assert "가진 재료 60% · 5가지 중 3가지" in page and "추가 2가지" in page
+    assert "기본 양념</strong>소금 · 참깨" in page
 
 
 def test_ingredient_suggest(client, make_user, make_recipe):

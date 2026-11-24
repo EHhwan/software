@@ -50,15 +50,16 @@
           <span class="rm-small rm-muted">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}</span>
         </div>
         <div class="rm-availability">
-          <span class="rm-available">{{ r.ingredients|length }}가지 중 {{ c.has|length }}가지 보유</span>
-          <span class="rm-missing">추가 {{ c.missing|length }}가지</span>
+          <span class="rm-available">가진 재료 {{ c.percent }}% · {{ c.has|length + c.missing|length }}가지 중 {{ c.has|length }}가지</span>
+          <span class="rm-missing">{{ '추가 %d가지'|format(c.missing|length) if c.missing else '바로 만들 수 있어요' }}</span>
         </div>
         <div class="rm-breakdown">
           <p><strong>보유 재료</strong>{{ c.has|map(attribute='name')|join(' · ') }}</p>
           <p><strong>추가 필요</strong>{% for i in c.missing %}{{ i.name }} {{ amount(i) }}{{ ' · ' if not loop.last }}{% else %}없음{% endfor %}</p>
+          {% if c.basic %}<p class="rm-basic"><strong>기본 양념</strong>{{ c.basic|map(attribute='name')|join(' · ') }} <span class="rm-caption-inline">(집에 있다고 보고 계산에서 뺐어요)</span></p>{% endif %}
         </div>
         <div class="rm-end-row">
-          <button type="button" class="rm-btn rm-btn-secondary" data-copy-text="{{ r.title }} · 장보기 목록&#10;{% for i in c.missing %}□ {{ i.name }} {{ amount(i) }}&#10;{% else %}추가로 필요한 재료가 없어요.{% endfor %}">장보기 목록 복사</button>
+          <button type="button" class="rm-btn rm-btn-secondary" data-copy-text="{{ r.title }} · 장보기 목록&#10;{% for i in c.missing %}□ {{ i.name }} {{ amount(i) }}&#10;{% else %}추가로 필요한 재료가 없어요.&#10;{% endfor %}{% if c.basic %}(기본 양념 확인: {{ c.basic|map(attribute='name')|join(', ') }}){% endif %}">장보기 목록 복사</button>
           {% if current_user.is_authenticated %}
           <form method="post" action="{{ url_for('pantry.adapt') }}" data-loading-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -81,7 +82,7 @@
   <aside class="rm-panel">
     <h2>추천 과정</h2>
     <ol class="rm-small rm-muted mt-3 ps-3">
-      <li class="mb-2">보유 재료와 이름이 같은 재료가 있는 레시피를 찾아요. <span class="d-block">(일반 계산, 부족한 재료가 적은 순)</span></li>
+      <li class="mb-2">보유 재료와 이름이 같은 재료가 있는 레시피를 찾아요. <span class="d-block">(일반 계산, 가진 재료 비율이 높은 순. 소금·간장 같은 기본 양념은 부족한 재료로 세지 않아요)</span></li>
       <li class="mb-2">후보마다 가진 재료와 더 필요한 재료를 나눠 보여 줘요.</li>
       <li>원하는 후보를 고르면 AI가 대체 재료와 바뀐 조리법을 제안해요.</li>
     </ol>

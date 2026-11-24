@@ -385,6 +385,8 @@ mark.rm-ink { background: linear-gradient(transparent 30%, var(--rm-mint-tint) 3
 .rm-missing { background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; color: var(--rm-ochre-text); padding: 3px 12px; border-radius: 999px; font-size: 14px; font-weight: 600; }
 .rm-breakdown { margin-top: 12px; border-top: 1px solid var(--rm-divider); padding-top: 8px; }
 .rm-breakdown p { font-size: 15px; line-height: 1.7; margin: 4px 0; color: var(--rm-body); }
+.rm-breakdown .rm-basic { font-size: 14px; color: var(--rm-muted); }
+.rm-caption-inline { font-size: 13px; color: var(--rm-caption); }
 .rm-breakdown strong { display: inline-block; min-width: 84px; font-weight: 600; font-size: 13px; color: var(--rm-muted); }
 
 /* 대체 재료: [원래] → [대신 쓸 재료 + 배지] / 바뀌는 점 */

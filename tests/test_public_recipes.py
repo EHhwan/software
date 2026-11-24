@@ -243,3 +243,12 @@ def test_background_import_refreshes_only_when_outdated(app, rows, imported, mon
     assert calls == ["key"]
     with app.app_context():
         assert pr.outdated_count() == 0
+
+
+def test_search_ignores_spaces(client, make_user, make_recipe, imported):
+    uid = make_user()
+    make_recipe(uid, title="김치 볶음밥", ingredients=(("묵은 김치", 200, "g"), ("밥", 1, "공기")))
+    assert "새우 두부 계란찜" in client.get("/?q=새우두부계란찜&source=public").get_data(as_text=True)
+    assert "새우 두부 계란찜" in client.get("/?q=두부 계란&source=public").get_data(as_text=True)
+    assert "김치 볶음밥" in client.get("/?q=김치볶음밥").get_data(as_text=True)
+    assert "김치 볶음밥" in client.get("/?q=묵은김치").get_data(as_text=True)  # 재료 이름도 띄어쓰기 무시

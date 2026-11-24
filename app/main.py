@@ -21,6 +21,15 @@ def _escape_like(text):
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _no_space(text):
+    return "".join(text.split())
+
+
+def _squeeze(column):
+    """DB 쪽 글자에서 공백을 지운 값 (SQLite·PostgreSQL 모두 replace 함수가 있다)"""
+    return func.replace(column, " ", "")
+
+
 def _browse_query(source, q, category, max_time, origin):
     stmt = db.select(Recipe).where(Recipe.is_public.is_(True))
     stmt = stmt.where(Recipe.origin == "public") if source == "public" else stmt.where(Recipe.origin != "public")
@@ -33,9 +42,10 @@ def _browse_query(source, q, category, max_time, origin):
     elif origin == "ai":
         stmt = stmt.where(Recipe.origin.in_(Recipe.AI_ORIGINS))
     if q:
-        like = f"%{_escape_like(q)}%"
-        by_ingredient = db.select(Ingredient.recipe_id).where(Ingredient.name.ilike(like, escape="\\"))
-        stmt = stmt.where(or_(Recipe.title.ilike(like, escape="\\"), Recipe.id.in_(by_ingredient)))
+        # 띄어쓰기를 무시하고 비교한다: '새우두부계란찜' 으로도 '새우 두부 계란찜' 을 찾고, 그 반대도 된다
+        like = f"%{_escape_like(_no_space(q))}%"
+        by_ingredient = db.select(Ingredient.recipe_id).where(_squeeze(Ingredient.name).ilike(like, escape="\\"))
+        stmt = stmt.where(or_(_squeeze(Recipe.title).ilike(like, escape="\\"), Recipe.id.in_(by_ingredient)))
     return stmt
 
 

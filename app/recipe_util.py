@@ -70,6 +70,14 @@ def normalize_name(name):
     return ALIASES.get(n, n)
 
 
+# 보유 재료 추천에서 '부족한 재료'로 세지 않는 기본 양념 (대부분 집에 있어서 장보기·순위 계산에서 뺀다)
+BASIC_SEASONINGS = {"소금", "설탕", "후추", "후춧가루", "물", "식용유", "간장", "참기름", "깨", "참깨", "통깨", "식초"}
+
+
+def is_basic_seasoning(name):
+    return normalize_name(name) in BASIC_SEASONINGS
+
+
 ALIASES = {"계란": "달걀", "에그": "달걀", "파": "대파", "파스타면": "스파게티면", "쌀밥": "밥", "흰밥": "밥"}
 COMMON_INGREDIENTS = [
     "달걀", "감자", "고구마", "김치", "당근", "대파", "쪽파", "두부", "마늘", "밥", "버섯", "설탕", "소금", "식용유",
