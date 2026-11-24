@@ -284,3 +284,17 @@ def test_pantry_adapt(client, app, make_user, make_recipe, fake_ai):
     with app.app_context():
         rec = db.session.scalar(db.select(Recipe).filter_by(origin="ai_pantry"))
         assert rec.sources[0].source_title == "대파 달걀 덮밥"
+
+
+def test_clear_all_pantry_items_only_mine(app, client, make_user):
+    other = make_user("other01", "남")
+    login(client, "other01")
+    client.post("/pantry/saved", data={"add": "버터"})
+    client.post("/logout")
+    uid = make_user()
+    login(client)
+    client.post("/pantry/saved/basics")
+    assert len(_saved(app, uid)) == 8
+    res = client.post("/pantry/saved/clear", follow_redirects=True)
+    assert "저장된 재료 8개를 모두 지웠어요" in res.get_data(as_text=True)
+    assert _saved(app, uid) == [] and _saved(app, other) == ["버터"]  # 다른 사람 것은 그대로

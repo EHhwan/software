@@ -256,6 +256,81 @@
   var hl = $('[data-highlight-toggle]');
   if (hl) hl.addEventListener('change', function () { $('#comparison-board').classList.toggle('rm-no-highlights', !hl.checked); });
 
+  // ---------- 저장할 재료 입력칸: 자동완성 ('달' → 달걀). 쉼표로 여러 개를 쓸 때는 마지막 재료만 추천 ----------
+  var savedInput = $('#saved-input');
+  if (savedInput) {
+    var sList = $('#saved-suggestions'), sOptions = [], sActive = -1, sTimer = null, sSeq = 0;
+    var S_ALIAS = {'계란': '달걀', '에그': '달걀', '후춧가루': '후추', '통깨': '참깨'};
+    var sNorm = function (s) { s = s.replace(/\s+/g, ''); return S_ALIAS[s] || s; };
+    var alreadySaved = [];
+    try { alreadySaved = JSON.parse(($('#pantry-form') || {dataset: {}}).dataset.saved || '[]').map(sNorm); } catch (err) { alreadySaved = []; }
+    var parts = function () { return savedInput.value.split(/[,、]/); };
+    var lastPart = function () { var p = parts(); return p[p.length - 1].trim(); };
+    var typed = function () { return parts().slice(0, -1).map(function (p) { return sNorm(p.trim()); }).filter(Boolean); };
+    function sHide() { sList.hidden = true; savedInput.setAttribute('aria-expanded', 'false'); savedInput.removeAttribute('aria-activedescendant'); sActive = -1; }
+    function sMark(i) {
+      sActive = i;
+      $$('[role=option]', sList).forEach(function (o, k) { o.setAttribute('aria-selected', String(k === i)); });
+      if (i >= 0) savedInput.setAttribute('aria-activedescendant', 'saved-suggest-' + i);
+    }
+    function sPick(o) {
+      var p = parts(); p[p.length - 1] = (p.length > 1 ? ' ' : '') + o.name;
+      savedInput.value = p.join(',') + ', ';
+      sHide(); savedInput.focus();
+    }
+    function sRender(query, items) {
+      var skip = typed();
+      sOptions = items.map(function (o) {
+        var n = sNorm(o.name);
+        return {name: o.name, alias: o.alias, saved: alreadySaved.indexOf(n) >= 0, disabled: alreadySaved.indexOf(n) >= 0 || skip.indexOf(n) >= 0};
+      });
+      sList.replaceChildren();
+      if (!sOptions.length) { sHide(); return; }
+      sOptions.forEach(function (o, i) {
+        var li = document.createElement('li');
+        li.id = 'saved-suggest-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false'); li.setAttribute('aria-disabled', String(o.disabled));
+        var left = document.createElement('span');
+        var at = o.name.indexOf(query);
+        if (at >= 0) { var m = document.createElement('mark'); m.textContent = query; left.append(o.name.slice(0, at), m, o.name.slice(at + query.length)); }
+        else left.textContent = o.name;
+        if (o.alias) { var small = document.createElement('small'); small.textContent = '다른 이름: ' + o.alias; left.appendChild(small); }
+        var right = document.createElement('span'); right.className = 'rm-note-right';
+        right.textContent = o.saved ? '이미 저장됨' : o.disabled ? '입력함' : '선택';
+        li.append(left, right);
+        li.addEventListener('pointerdown', function (e) { e.preventDefault(); });
+        li.addEventListener('click', function () { if (!o.disabled) sPick(o); });
+        sList.appendChild(li);
+      });
+      sList.hidden = false;
+      savedInput.setAttribute('aria-expanded', 'true');
+      sMark(sOptions.findIndex(function (o) { return !o.disabled; }));
+    }
+    function sSuggest() {
+      var q = lastPart();
+      if (!q) { sHide(); return; }
+      var my = ++sSeq;
+      fetch(savedInput.dataset.suggestUrl + '?q=' + encodeURIComponent(q), {headers: {'Accept': 'application/json'}})
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .catch(function () { return []; })
+        .then(function (items) { if (my === sSeq && lastPart() === q) sRender(q, items); });
+    }
+    savedInput.addEventListener('input', function () { clearTimeout(sTimer); sTimer = setTimeout(sSuggest, 150); });
+    savedInput.addEventListener('focus', sSuggest);
+    savedInput.addEventListener('blur', function () { setTimeout(sHide, 120); });
+    savedInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { sHide(); return; }
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !sList.hidden) {
+        e.preventDefault();
+        var enabled = sOptions.map(function (o, i) { return o.disabled ? -1 : i; }).filter(function (i) { return i >= 0; });
+        if (!enabled.length) return;
+        var cur = enabled.indexOf(sActive);
+        sMark(enabled[(cur + (e.key === 'ArrowDown' ? 1 : -1) + enabled.length) % enabled.length]);
+      }
+      // 추천이 열려 있고 하나가 선택돼 있으면 Enter 는 그 재료 넣기, 아니면 그대로 저장
+      if (e.key === 'Enter' && !sList.hidden && sActive >= 0 && !sOptions[sActive].disabled) { e.preventDefault(); sPick(sOptions[sActive]); }
+    });
+  }
+
   // ---------- 보유 재료: 칩 + 자동완성 ----------
   var input = $('#ingredient-input');
   if (input) {

@@ -31,7 +31,13 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="rm-small rm-muted mt-2">다 떨어진 재료는 ×로 지워 주세요. 지우지 않으면 계속 ‘가진 재료’로 계산돼요.</p>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+          <p class="rm-small rm-muted">다 떨어진 재료는 ×로 지워 주세요. 지우지 않으면 계속 ‘가진 재료’로 계산돼요.</p>
+          <form method="post" action="{{ url_for('pantry.clear_items') }}" data-confirm="저장된 재료 {{ saved|length }}개를 모두 지울까요? 되돌릴 수 없어요.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
+            <button class="rm-btn rm-btn-danger rm-btn-sm">모두 지우기</button>
+          </form>
+        </div>
         {% else %}
         <p class="rm-small rm-muted mt-2">아직 저장된 재료가 없어요. 소금·간장 같은 기본 양념이나 자주 쓰는 재료를 저장해 두세요.</p>
         {% endif %}
@@ -39,7 +45,11 @@
           <form method="post" action="{{ url_for('pantry.save_items') }}" class="rm-saved-add">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
             <label class="rm-sr-only" for="saved-input">저장할 재료 이름</label>
-            <input id="saved-input" name="add" class="form-control" placeholder="저장할 재료 · 쉼표로 여러 개" maxlength="200" required>
+            <div class="rm-autocomplete">
+              <input id="saved-input" name="add" class="form-control" placeholder="저장할 재료 · 예: 달 · 쉼표로 여러 개" maxlength="200" required autocomplete="off"
+                     role="combobox" aria-autocomplete="list" aria-controls="saved-suggestions" aria-expanded="false" data-suggest-url="{{ url_for('pantry.suggest') }}">
+              <ul class="rm-suggestions" id="saved-suggestions" role="listbox" aria-label="저장할 재료 이름 추천" hidden></ul>
+            </div>
             <button class="rm-btn rm-btn-secondary">저장</button>
           </form>
           {% if basic_to_save %}

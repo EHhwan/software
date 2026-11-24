@@ -190,6 +190,15 @@ def save_basics():
     return _back_to_pantry()
 
 
+@bp.post("/pantry/saved/clear")
+@login_required
+def clear_items():
+    n = db.session.execute(db.delete(PantryItem).where(PantryItem.user_id == current_user.id)).rowcount
+    db.session.commit()
+    flash(f"저장된 재료 {n}개를 모두 지웠어요." if n else "지울 저장된 재료가 없어요.", "success" if n else "info")
+    return _back_to_pantry()
+
+
 @bp.post("/pantry/saved/<int:item_id>/delete")
 @login_required
 def delete_item(item_id):
