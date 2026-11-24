@@ -18,5 +18,14 @@ if os.environ.get("SEED_DEMO") == "1":
         db.session.remove()
         db.engine.dispose()  # 예시 데이터를 넣느라 연 DB 연결도 닫고 요청은 새 연결로 시작
 
+# 공공 레시피(식품의약품안전처 API): 인증키가 있고 아직 한 번도 가져오지 않았으면, 서버를 켤 때 뒤에서(별도 스레드) 가져온다.
+# 1,000개가 넘어 몇십 초 걸리므로 그동안에도 사이트는 바로 쓸 수 있게 한다. 직접 가져오려면 python import_public_recipes.py
+# (python run.py 는 코드가 바뀌면 다시 켜지는 감시 프로세스가 하나 더 있어서, 실제 서버 프로세스에서만 실행한다)
+if os.environ.get("FOODSAFETY_API_KEY") and (__name__ != "__main__" or os.environ.get("WERKZEUG_RUN_MAIN") == "true"):
+    import threading
+
+    from app.public_recipes import import_public_in_background
+    threading.Thread(target=import_public_in_background, args=(app, os.environ["FOODSAFETY_API_KEY"]), daemon=True).start()
+
 if __name__ == "__main__":
     app.run(debug=True)

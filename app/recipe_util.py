@@ -64,8 +64,9 @@ def parse_quantity(text):
 
 
 def normalize_name(name):
-    """재료 이름 비교용: 공백 제거 + 같은 재료의 다른 이름 통일 (계란 → 달걀)."""
-    n = re.sub(r"\s+", "", name or "")
+    """재료 이름 비교용: 손질 표현 떼기(다진 마늘 → 마늘) + 공백 제거 + 같은 재료의 다른 이름 통일 (계란 → 달걀)."""
+    n = re.sub(r"^(다진|채\s?썬|삶은|데친|볶은|으깬)\s+", "", (name or "").strip())
+    n = re.sub(r"\s+", "", n)
     return ALIASES.get(n, n)
 
 

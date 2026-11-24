@@ -16,7 +16,7 @@
 
 <div class="rm-compare-sources">
   {% for s in sources[:2] %}
-  <div class="rm-source-box"><span class="rm-source-label">원본 {{ 'A · 내 레시피' if loop.first else 'B · 다른 사람의 레시피' }}</span><h2>{{ s.title }}</h2><p>{{ s.author }}{% if s.servings %} · {{ s.servings }}인분 · {{ s.cook_time_min }}분{% endif %}</p></div>
+  <div class="rm-source-box"><span class="rm-source-label">원본 {{ 'A · 내 레시피' if loop.first else 'B · 다른 사람의 레시피' }}</span><h2>{{ s.title }}</h2><p>{{ s.author }}{% if s.servings %} · {{ s.servings }}인분 · {{ cook_time(s.cook_time_min) }}{% endif %}</p></div>
   {% endfor %}
   <div class="rm-source-box rm-result-source"><span class="rm-source-label">조합 결과</span><h2>{{ result.title }}</h2><p>{{ result.servings }}인분 · 약 {{ result.cook_time_min }}분{{ ' · 저장 전' if draft and not draft.saved_recipe_id }}</p></div>
 </div>

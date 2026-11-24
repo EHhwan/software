@@ -20,5 +20,7 @@ services:
         value: gemini-3.6-flash
       - key: SEED_DEMO
         value: "1"                # 시작할 때 예시 레시피 넣기 (필요 없으면 0)
+      - key: FOODSAFETY_API_KEY
+        sync: false               # 식품안전나라 인증키. 있으면 시작할 때 공공 레시피를 한 번 가져온다 (이미 있으면 건너뜀)
       - key: DATABASE_URL
         sync: false               # Neon 의 연결 주소를 화면에서 직접 입력 (비밀번호가 들어 있어 GitHub 에 올리지 않음)

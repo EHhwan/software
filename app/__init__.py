@@ -22,11 +22,16 @@ SERVICE_NAME = "레시피 믹스"
 
 def _upgrade_schema():
     """create_all 은 이미 있는 테이블에 새 컬럼을 추가하지 않는다.
-    1차에서 만든 DB(category 컬럼 없음)도 그대로 쓸 수 있게 빠진 컬럼만 추가한다."""
+    예전에 만든 DB(category·공공 레시피 컬럼 없음)도 그대로 쓸 수 있게 빠진 컬럼만 추가한다."""
     cols = {c["name"] for c in inspect(db.engine).get_columns("recipes")}
-    if "category" not in cols:
-        with db.engine.begin() as conn:
+    with db.engine.begin() as conn:
+        if "category" not in cols:
             conn.execute(text("ALTER TABLE recipes ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT '기타'"))
+        if "external_id" not in cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN external_id VARCHAR(40)"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_recipes_external_id ON recipes (external_id)"))
+        if "extra_info" not in cols:
+            conn.execute(text("ALTER TABLE recipes ADD COLUMN extra_info TEXT"))
 
 
 @event.listens_for(Engine, "connect")
@@ -88,6 +93,11 @@ def create_app(overrides=None):
         return format_amount(get("quantity"), get("unit"), factor)
 
     app.jinja_env.globals.update(format_quantity=format_quantity, CHANGE_TYPES=CHANGE_TYPES)
+
+    @app.template_global()
+    def cook_time(minutes):
+        """조리 시간 글자. 공공 레시피처럼 시간 정보가 없으면(0) '시간 정보 없음'."""
+        return f"{minutes}분" if minutes else "시간 정보 없음"
 
     @app.template_global()
     def url_with(**changes):

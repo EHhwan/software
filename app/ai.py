@@ -79,7 +79,7 @@ def recipe_for_prompt(recipe):
         "요리 이름": recipe.title,
         "설명": recipe.description,
         "인분": recipe.servings,
-        "조리 시간(분)": recipe.cook_time_min,
+        "조리 시간(분)": recipe.cook_time_min or "정보 없음",
         "재료": [{"이름": i.name, "수량": i.quantity, "단위": i.unit} for i in recipe.ingredients],
         "조리 순서": [s.content for s in recipe.steps],
     }

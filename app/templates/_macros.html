@@ -10,7 +10,7 @@
 {# 인분 · 시간 · 좋아요: 진한 숫자 + 연한 단위 #}
 {% macro meta(r, like_count, liked=False) -%}
 <span class="rm-meta-item">{{ icon('people') }}<span><b>{{ r.servings }}</b>인분</span></span>
-<span class="rm-meta-item">{{ icon('clock') }}<span><span class="rm-sr-only">조리 시간 </span><b>{{ r.cook_time_min }}</b>분</span></span>
+{% if r.cook_time_min %}<span class="rm-meta-item">{{ icon('clock') }}<span><span class="rm-sr-only">조리 시간 </span><b>{{ r.cook_time_min }}</b>분</span></span>{% endif %}
 <span class="rm-meta-item{{ ' liked' if liked }}">{{ icon('heart') }}<span><span class="rm-sr-only">좋아요 </span><b data-like-count>{{ like_count }}</b></span></span>
 {%- endmacro %}
 
@@ -33,7 +33,7 @@
   <div class="rm-kind">
     <span>{{ r.category }}</span>
     <span class="d-flex gap-1">
-      {% if r.is_ai %}<span class="rm-badge rm-badge-ai">{{ r.origin_label }}</span>{% endif %}
+      {% if r.is_ai %}<span class="rm-badge rm-badge-ai">{{ r.origin_label }}</span>{% elif r.is_public_data %}<span class="rm-badge rm-badge-public">{{ r.origin_label }}</span>{% endif %}
       {% if show_visibility and not r.is_public %}<span class="rm-badge rm-badge-neutral">나만 보기</span>{% endif %}
     </span>
   </div>

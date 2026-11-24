@@ -38,8 +38,10 @@ CATEGORIES = ["밥·덮밥·볶음밥", "면", "국·탕·찌개", "반찬", "�
 class Recipe(db.Model):
     __tablename__ = "recipes"
 
-    ORIGINS = ("user", "ai_mix", "ai_pantry")  # 직접 작성 / AI 레시피 믹스 / AI 보유 재료 추천
-    ORIGIN_LABEL = {"user": "직접 작성", "ai_mix": "AI 조합", "ai_pantry": "AI 재료 맞춤"}
+    # 직접 작성 / AI 레시피 믹스 / AI 보유 재료 추천 / 공공 레시피(식품의약품안전처 API 에서 가져옴)
+    ORIGINS = ("user", "ai_mix", "ai_pantry", "public")
+    AI_ORIGINS = ("ai_mix", "ai_pantry")
+    ORIGIN_LABEL = {"user": "직접 작성", "ai_mix": "AI 조합", "ai_pantry": "AI 재료 맞춤", "public": "공공 레시피"}
 
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -51,6 +53,8 @@ class Recipe(db.Model):
     origin = db.Column(db.String(20), nullable=False, default="user")
     ai_note = db.Column(db.Text)                              # AI 결과의 '달라진 점·변경 이유' 등 (JSON 문자열, 4차)
     is_public = db.Column(db.Boolean, nullable=False, default=True)  # AI 결과는 비공개로 저장했다가 공개할 수 있다
+    external_id = db.Column(db.String(40), unique=True, index=True)  # 공공 레시피의 원본 번호 (같은 레시피 중복 저장 방지)
+    extra_info = db.Column(db.Text)                           # 공공 레시피의 출처·영양 정보 (JSON 문자열)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
@@ -66,7 +70,20 @@ class Recipe(db.Model):
 
     @property
     def is_ai(self):
-        return self.origin != "user"
+        return self.origin in self.AI_ORIGINS
+
+    @property
+    def is_public_data(self):
+        """공공 데이터(API)에서 가져온 레시피인가"""
+        return self.origin == "public"
+
+    @property
+    def public_info(self):
+        """공공 레시피의 출처·영양 정보. 다른 레시피는 빈 dict."""
+        try:
+            return json.loads(self.extra_info) if self.extra_info else {}
+        except ValueError:
+            return {}
 
     @property
     def origin_label(self):

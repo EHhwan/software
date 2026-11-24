@@ -7,7 +7,7 @@
   <div class="rm-small rm-muted">{{ label }}</div>
   {% if r %}
     <div class="rm-selected-name" id="{{ kind }}-name">{{ r.title }}</div>
-    <div class="rm-small rm-muted" id="{{ kind }}-meta">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분</div>
+    <div class="rm-small rm-muted" id="{{ kind }}-meta">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}</div>
     <button type="button" class="rm-btn rm-btn-secondary rm-btn-wide mt-3" data-open-dialog="{{ kind }}-dialog" {{ 'disabled' if list|length < 2 }}>다른 레시피 선택</button>
   {% elif kind == 'own' %}
     <p class="mt-2">아직 내 레시피가 없어요.</p>
@@ -22,12 +22,15 @@
 {% macro source_dialog(kind, title, list, current) %}
 <dialog class="rm-dialog" id="{{ kind }}-dialog" aria-labelledby="{{ kind }}-dialog-title">
   <h2 id="{{ kind }}-dialog-title">{{ title }}</h2>
-  <p class="rm-small rm-muted">조합에 사용할 레시피 하나를 고르세요.</p>
+  <p class="rm-small rm-muted">조합에 사용할 레시피 하나를 고르세요.{% if kind == 'other' %} 공공 레시피는 일부만 보여요. 다른 공공 레시피는 레시피 둘러보기에서 찾은 뒤 ‘이 레시피와 조합’을 누르세요.{% endif %}</p>
+  {% if list|length > 8 %}
+  <input type="search" class="form-control mt-3" placeholder="레시피 이름으로 찾기" aria-label="레시피 이름으로 찾기" data-dialog-filter="{{ kind }}">
+  {% endif %}
   <div class="rm-dialog-options">
     {% for r in list %}
     <button type="button" class="rm-dialog-option" data-pick="{{ kind }}" data-id="{{ r.id }}" data-title="{{ r.title }}"
-            data-meta="{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분" aria-current="{{ 'true' if current and current.id == r.id else 'false' }}">
-      <span><strong>{{ r.title }}</strong><br><small>{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분{{ ' · 나만 보기' if not r.is_public }}</small></span>
+            data-meta="{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}" aria-current="{{ 'true' if current and current.id == r.id else 'false' }}">
+      <span><strong>{{ r.title }}</strong><br><small>{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}{{ ' · 나만 보기' if not r.is_public }}</small></span>
       <span aria-hidden="true">선택 →</span>
     </button>
     {% endfor %}

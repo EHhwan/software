@@ -47,7 +47,7 @@
       <article class="rm-candidate">
         <div class="d-flex flex-wrap justify-content-between gap-2">
           <h3><a href="{{ url_for('recipes.detail', recipe_id=r.id) }}">{{ r.title }}</a></h3>
-          <span class="rm-small rm-muted">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ r.cook_time_min }}분</span>
+          <span class="rm-small rm-muted">{{ r.author.nickname }} · {{ r.servings }}인분 · {{ cook_time(r.cook_time_min) }}</span>
         </div>
         <div class="rm-availability">
           <span class="rm-available">{{ r.ingredients|length }}가지 중 {{ c.has|length }}가지 보유</span>

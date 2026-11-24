@@ -1,7 +1,7 @@
 """메인(레시피 둘러보기) · 마이페이지"""
 from flask import Blueprint, render_template, request
 from flask_login import current_user, login_required
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 
 from .extensions import db
 from .models import CATEGORIES, Bookmark, Ingredient, Like, Recipe
@@ -11,7 +11,7 @@ bp = Blueprint("main", __name__)
 
 PER_PAGE = 12
 TIME_FILTERS = {0: "시간 제한 없음", 15: "15분 이하", 30: "30분 이하", 60: "1시간 이하"}
-ORIGIN_FILTERS = {"all": "모든 레시피", "user": "직접 작성", "ai": "AI로 만든 레시피"}
+ORIGIN_FILTERS = {"all": "모든 레시피", "user": "직접 작성", "ai": "AI로 만든 레시피", "public": "공공 레시피"}
 
 
 def _escape_like(text):
@@ -36,21 +36,25 @@ def index():
     if category != "전체":
         stmt = stmt.where(Recipe.category == category)
     if max_time:
-        stmt = stmt.where(Recipe.cook_time_min <= max_time)
+        stmt = stmt.where(Recipe.cook_time_min > 0, Recipe.cook_time_min <= max_time)  # 0 = 시간 정보 없음
     if origin == "user":
         stmt = stmt.where(Recipe.origin == "user")
     elif origin == "ai":
-        stmt = stmt.where(Recipe.origin != "user")
+        stmt = stmt.where(Recipe.origin.in_(Recipe.AI_ORIGINS))
+    elif origin == "public":
+        stmt = stmt.where(Recipe.origin == "public")
     if q:
         like = f"%{_escape_like(q)}%"
         by_ingredient = db.select(Ingredient.recipe_id).where(Ingredient.name.ilike(like, escape="\\"))
         stmt = stmt.where(or_(Recipe.title.ilike(like, escape="\\"), Recipe.id.in_(by_ingredient)))
+    # 공공 레시피(1,000개 넘게 한꺼번에 들어옴)가 사용자들이 올린 레시피를 덮지 않도록, 같은 조건이면 커뮤니티 레시피를 먼저 보여 준다
+    community_first = case((Recipe.origin == "public", 1), else_=0)
     if sort == "popular":
         # 인기순은 좋아요 수 기준으로 계산한다 (AI 사용 안 함)
         like_count = db.select(func.count(Like.user_id)).where(Like.recipe_id == Recipe.id).correlate(Recipe).scalar_subquery()
-        stmt = stmt.order_by(like_count.desc(), Recipe.created_at.desc())
+        stmt = stmt.order_by(like_count.desc(), community_first, Recipe.created_at.desc(), Recipe.id.desc())
     else:
-        stmt = stmt.order_by(Recipe.created_at.desc(), Recipe.id.desc())
+        stmt = stmt.order_by(community_first, Recipe.created_at.desc(), Recipe.id.desc())
 
     page = db.paginate(stmt, page=request.args.get("page", 1, type=int), per_page=PER_PAGE, error_out=False)
     filters = {"q": q, "category": category, "time": max_time, "origin": origin, "sort": sort}

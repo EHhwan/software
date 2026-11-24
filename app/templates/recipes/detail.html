@@ -8,7 +8,7 @@
 <div class="rm-detail-layout">
   <article class="rm-detail-content">
     <div class="rm-detail-head">
-      <span class="rm-badge {{ 'rm-badge-ai' if r.is_ai else 'rm-badge-neutral' }}">{{ r.origin_label }} · {{ r.category }}</span>
+      <span class="rm-badge {{ 'rm-badge-ai' if r.is_ai else 'rm-badge-public' if r.is_public_data else 'rm-badge-neutral' }}">{{ r.origin_label }} · {{ r.category }}</span>
       <h1>{{ r.title }}</h1>
       {% if r.description %}<p>{{ r.description }}</p>{% endif %}
       <div class="rm-meta-line mt-3">
@@ -18,6 +18,17 @@
 
     {% if r.is_ai %}
     <div class="rm-form-notice mt-4">AI가 만든 레시피예요. 실제 조리 결과를 보장하지 않으니 재료 분량과 순서를 검토한 뒤 만들어 주세요.</div>
+    {% endif %}
+    {% if r.is_public_data %}
+    {% set pinfo = r.public_info %}
+    <div class="rm-public-source mt-4">
+      <p><strong>공공 레시피</strong> 출처: {{ pinfo.source or '식품의약품안전처' }}. 원본 재료 글을 이름·양·단위로 나눠 옮겼어요. 원본에 없는 조리 시간은 표시하지 않아요.</p>
+      {% if pinfo.nutrition %}
+      <dl class="rm-nutrition" aria-label="1회 제공량 영양 정보">
+        {% for name, v in pinfo.nutrition.items() %}<div><dt>{{ name }}</dt><dd>{{ '%g'|format(v[0]) }}<small>{{ v[1] }}</small></dd></div>{% endfor %}
+      </dl>
+      {% endif %}
+    </div>
     {% endif %}
 
     <div class="rm-section-head">

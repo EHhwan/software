@@ -10,6 +10,7 @@ from .services import (ai_error_message, ai_rate_limited, new_draft, save_draft_
 bp = Blueprint("mix", __name__)
 
 MAX_MIX_SERVINGS = 10
+MAX_PUBLIC_IN_LIST = 60
 GOAL_EXAMPLES = [
     ("부드러운 맛", "자극적인 맛은 줄이고, 부드럽고 순한 맛으로 만들어 주세요."),
     ("간단한 조리", "조리 단계를 줄여 20분 안에 만들 수 있게 해 주세요."),
@@ -18,11 +19,24 @@ GOAL_EXAMPLES = [
 ]
 
 
-def _mix_candidates():
+def _mix_candidates(extra_ids=()):
+    """조합할 수 있는 레시피 목록. 다른 사람의 레시피는 커뮤니티 레시피를 먼저, 공공 레시피는 일부만 보여 준다.
+    (공공 레시피가 1,000개가 넘어 전부 보여 주면 화면이 무거워진다. 다른 공공 레시피는 상세 화면의 '이 레시피와 조합'으로 고른다.)"""
     own = db.session.scalars(db.select(Recipe).where(Recipe.author_id == current_user.id)
                              .order_by(Recipe.created_at.desc())).all()
-    others = db.session.scalars(db.select(Recipe).where(Recipe.is_public.is_(True), Recipe.author_id != current_user.id)
-                                .order_by(Recipe.created_at.desc()).limit(200)).all()
+    others_visible = (Recipe.is_public.is_(True), Recipe.author_id != current_user.id)
+    community = db.session.scalars(db.select(Recipe).where(*others_visible, Recipe.origin != "public")
+                                   .order_by(Recipe.created_at.desc()).limit(200)).all()
+    public = db.session.scalars(db.select(Recipe).where(*others_visible, Recipe.origin == "public")
+                                .order_by(Recipe.id).limit(MAX_PUBLIC_IN_LIST)).all()
+    others = community + public
+    # 상세 화면에서 고른 레시피가 목록에 없으면(공공 레시피 등) 맨 앞에 넣는다
+    listed = {r.id for r in others}
+    for rid in extra_ids:
+        if rid and rid not in listed:
+            r = db.session.get(Recipe, rid)
+            if r and r.is_public and r.author_id != current_user.id:
+                others.insert(0, r)
     return own, others
 
 
@@ -34,8 +48,8 @@ def _pick(candidates, recipe_id):
 @bp.route("/mix", methods=["GET", "POST"])
 @login_required
 def index():
-    own_list, other_list = _mix_candidates()
     values = request.values
+    own_list, other_list = _mix_candidates([values.get("other", type=int)])
     own = _pick(own_list, values.get("own", type=int))
     other = _pick(other_list, values.get("other", type=int))
     goal = values.get("goal", "").strip()[:300]

@@ -121,7 +121,7 @@
     $('[data-copy-recipe]').addEventListener('click', function () {
       var servings = detailStepper ? Number(detailStepper.dataset.value) : recipeData.servings;
       var lines = $$('#detail-ingredients tr').map(function (tr) { return '- ' + tr.cells[0].innerText.trim() + ' ' + tr.cells[1].innerText.trim(); });
-      copyText(recipeData.title + '\n' + servings + '인분 · ' + recipeData.cook_time_min + '분\n\n재료\n' + lines.join('\n') +
+      copyText(recipeData.title + '\n' + servings + '인분' + (recipeData.cook_time_min ? ' · ' + recipeData.cook_time_min + '분' : '') + '\n\n재료\n' + lines.join('\n') +
         '\n\n조리 순서\n' + recipeData.steps.map(function (s, i) { return (i + 1) + '. ' + s; }).join('\n') +
         '\n\n작성자: ' + recipeData.author + ' · 레시피 믹스');
     });
@@ -212,6 +212,15 @@
       $('#summary-' + kind).textContent = b.dataset.title;
       $$('[data-pick="' + kind + '"]').forEach(function (x) { x.setAttribute('aria-current', String(x === b)); });
       b.closest('dialog').close();
+    });
+  });
+  // 고르기 창의 이름 검색 (공공 레시피까지 들어가 목록이 길어서)
+  $$('[data-dialog-filter]').forEach(function (input) {
+    input.addEventListener('input', function () {
+      var q = input.value.replace(/\s+/g, '');
+      $$('[data-pick="' + input.dataset.dialogFilter + '"]').forEach(function (b) {
+        b.hidden = q !== '' && b.dataset.title.replace(/\s+/g, '').indexOf(q) === -1;
+      });
     });
   });
   $$('[data-goal]').forEach(function (b) {

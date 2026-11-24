@@ -33,22 +33,36 @@ def _have_list(values):
 
 
 def find_candidates(have):
-    """보유 재료와 이름이 일치하는 재료가 있는 레시피 (AI 사용 안 함)."""
+    """보유 재료와 이름이 일치하는 재료가 있는 레시피 (AI 사용 안 함).
+
+    직접 작성한 레시피와 공공 레시피가 후보다. 공공 레시피가 1,000개가 넘으므로 레시피마다 재료를 따로 읽지 않고
+    (레시피 번호, 재료 이름)을 한 번에 읽어 계산한 뒤, 고른 레시피만 불러온다.
+    """
     owned = {normalize_name(h) for h in have}
     if not owned:
         return []
     visible = Recipe.is_public.is_(True)
     if current_user.is_authenticated:
         visible = or_(visible, Recipe.author_id == current_user.id)
-    recipes = db.session.scalars(db.select(Recipe).where(visible, Recipe.origin == "user")).all()
+    rows = db.session.execute(
+        db.select(Ingredient.recipe_id, Ingredient.name).join(Recipe, Recipe.id == Ingredient.recipe_id)
+        .where(visible, Recipe.origin.in_(("user", "public")))
+    ).all()
+    by_recipe = {}
+    for recipe_id, name in rows:
+        has, missing = by_recipe.setdefault(recipe_id, (set(), set()))
+        key = normalize_name(name)
+        (has if key in owned else missing).add(key)
+    # 부족한 재료가 적은 순 → 가진 재료가 많은 순 → 최근 레시피 순
+    ranked = sorted((rid for rid, (has, _) in by_recipe.items() if has),
+                    key=lambda rid: (len(by_recipe[rid][1]), -len(by_recipe[rid][0]), -rid))[:MAX_CANDIDATES]
+    recipes = {r.id: r for r in db.session.scalars(db.select(Recipe).where(Recipe.id.in_(ranked)))} if ranked else {}
     out = []
-    for r in recipes:
-        has = [i for i in r.ingredients if normalize_name(i.name) in owned]
-        if has:
-            missing = [i for i in r.ingredients if normalize_name(i.name) not in owned]
-            out.append({"r": r, "has": has, "missing": missing})
-    out.sort(key=lambda c: (len(c["missing"]), -len(c["has"]), -c["r"].id))
-    return out[:MAX_CANDIDATES]
+    for rid in ranked:
+        r = recipes[rid]
+        out.append({"r": r, "has": [i for i in r.ingredients if normalize_name(i.name) in owned],
+                    "missing": [i for i in r.ingredients if normalize_name(i.name) not in owned]})
+    return out
 
 
 @bp.route("/pantry")
