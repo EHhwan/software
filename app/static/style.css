@@ -417,6 +417,24 @@ mark.rm-ink { background: linear-gradient(transparent 30%, var(--rm-mint-tint) 3
 .rm-saved-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rm-divider); }
 .rm-saved-add { display: flex; gap: 8px; flex: 1 1 320px; }
 .rm-saved-actions .rm-caption-inline { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+/* 기본 양념 목록: 버튼에 마우스를 올리거나 키보드로 가면 크림 카드로 뜬다 */
+.rm-tip { position: relative; }
+.rm-tip-panel { position: absolute; z-index: 20; right: 0; top: calc(100% + 8px); width: 300px; padding: 14px 16px; background: var(--rm-canvas); border: 1px solid var(--rm-line); border-top: 4px solid var(--rm-ochre); border-radius: var(--rm-r-md); box-shadow: var(--rm-shadow-lg); color: var(--rm-body);
+  opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .15s ease-out, transform .15s ease-out, visibility .15s; pointer-events: none; }
+.rm-tip:hover .rm-tip-panel, .rm-tip:focus-within .rm-tip-panel { opacity: 1; visibility: visible; transform: none; }
+.rm-tip-title { font-size: 14px; font-weight: 600; color: var(--rm-ink); }
+.rm-tip-title b { font-size: 18px; color: var(--rm-display); }
+.rm-tip-list { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rm-tip-list li { padding: 4px 12px; border-radius: 999px; background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; color: var(--rm-ochre-text); font-size: 14px; font-weight: 500; }
+.rm-tip-list li.is-saved { background: var(--rm-soft); border-color: var(--rm-line); color: var(--rm-caption); }
+.rm-tip-list small { margin-left: 4px; font-size: 12px; }
+.rm-tip-note { margin-top: 10px; font-size: 13px; color: var(--rm-caption); line-height: 1.5; }
+@media (hover: none) {
+  /* 터치 화면은 마우스를 올릴 수 없으니 버튼 아래에 늘 보여 준다 */
+  .rm-tip { display: grid; gap: 8px; }
+  .rm-tip-panel { position: static; width: auto; opacity: 1; visibility: visible; transform: none; box-shadow: none; padding: 10px 12px; }
+  .rm-tip-note { display: none; }
+}
 .rm-field-warning { margin: 6px 0 0; font-size: 14px; font-weight: 500; color: var(--rm-ochre-text); }
 .rm-field-warning:empty { display: none; }
 .rm-field-warning:not(:empty) { padding: 10px 12px; background: var(--rm-ochre-tint); border: 1px solid #e3cc8b; border-left: 4px solid var(--rm-ochre); border-radius: var(--rm-r-sm); }

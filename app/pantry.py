@@ -119,7 +119,8 @@ def index():
     searched = bool(have) or (request.args.get("find") == "1" and bool(saved))
     candidates = find_candidates(have, saved_names) if searched else []
     return render_template("pantry/index.html", have=have, saved=saved, candidates=candidates, searched=searched,
-                           basic_to_save=[b for b in BASIC_TO_SAVE if normalize_name(b) not in {normalize_name(n) for n in saved_names}])
+                           basic_to_save=[b for b in BASIC_TO_SAVE if normalize_name(b) not in {normalize_name(n) for n in saved_names}],
+                           basic_all=BASIC_TO_SAVE)
 
 
 @bp.post("/pantry/adapt")

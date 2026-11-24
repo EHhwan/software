@@ -53,9 +53,17 @@
             <button class="rm-btn rm-btn-secondary">저장</button>
           </form>
           {% if basic_to_save %}
-          <form method="post" action="{{ url_for('pantry.save_basics') }}">
+          <form method="post" action="{{ url_for('pantry.save_basics') }}" class="rm-tip">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{{ keep_inputs() }}
-            <button class="rm-btn rm-btn-secondary" title="{{ basic_to_save|join(', ') }}">기본 양념 한 번에 저장 <span class="rm-caption-inline">{{ basic_to_save|length }}개</span></button>
+            <button class="rm-btn rm-btn-secondary" aria-describedby="basic-tip">기본 양념 한 번에 저장 <span class="rm-caption-inline">{{ basic_to_save|length }}개</span></button>
+            {# 마우스를 올리거나 키보드로 버튼에 가면 어떤 양념이 저장되는지 보여 준다 (터치 화면에서는 버튼 아래에 항상 표시) #}
+            <div class="rm-tip-panel" id="basic-tip" role="tooltip">
+              <p class="rm-tip-title">저장될 기본 양념 <b>{{ basic_to_save|length }}</b>가지</p>
+              <ul class="rm-tip-list">
+                {% for b in basic_all %}<li class="{{ 'is-saved' if b not in basic_to_save }}">{{ b }}{% if b not in basic_to_save %}<small>저장됨</small>{% endif %}</li>{% endfor %}
+              </ul>
+              <p class="rm-tip-note">이미 저장한 양념은 건너뛰어요. 필요 없는 양념은 저장한 뒤 ×로 지우면 돼요.</p>
+            </div>
           </form>
           {% endif %}
           {% if have %}
