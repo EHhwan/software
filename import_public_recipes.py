@@ -9,6 +9,7 @@
   --limit 20          처음 20개만 (시험용)
   --save rows.json    받은 원본을 파일로 저장 (검증 기록·테스트용)
   --from-file rows.json  API 대신 저장해 둔 파일에서 가져오기
+  --refresh           이미 있는 레시피도 지금 방식으로 재료·조리 순서를 다시 정리 (좋아요·즐겨찾기는 그대로)
 """
 import argparse
 import json
@@ -24,6 +25,7 @@ def main():
     parser.add_argument("--limit", type=int)
     parser.add_argument("--save")
     parser.add_argument("--from-file")
+    parser.add_argument("--refresh", action="store_true")
     args = parser.parse_args()
 
     if args.from_file:
@@ -46,8 +48,8 @@ def main():
 
     app = create_app()  # create_app 이 .env 를 읽는다
     with app.app_context():
-        added, skipped, bad = import_rows(rows[: args.limit] if args.limit else rows)
-        print(f"저장 {added}개 · 이미 있어서 건너뜀 {skipped}개 · 재료나 조리 순서가 없어 뺌 {bad}개")
+        added, skipped, bad, refreshed = import_rows(rows[: args.limit] if args.limit else rows, refresh=args.refresh)
+        print(f"저장 {added}개 · 다시 정리 {refreshed}개 · 이미 있어서 건너뜀 {skipped}개 · 재료나 조리 순서가 없어 뺌 {bad}개")
         print(f"지금 DB 의 공공 레시피: {public_count()}개")
 
 

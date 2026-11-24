@@ -4,6 +4,7 @@
 2) convert_row()     : 원본 한 건을 우리 레시피 형식(제목·분류·재료·조리 순서)으로 바꾼다.
                        재료는 '연두부 75g(3/4모), 칵테일새우 20g(5마리)' 같은 글이라 이름·양·단위로 나눈다.
 3) import_rows()     : DB 에 저장한다. 같은 레시피(일련번호)는 다시 넣지 않으므로 여러 번 실행해도 된다.
+                       재료 나누는 방식을 고치면(PARSER_VERSION) 이미 있는 레시피도 다시 정리한다.
 
 공공 레시피는 '식품의약품안전처' 사용자 이름으로 저장되고 origin="public" 으로 구분된다.
 인증키(FOODSAFETY_API_KEY)는 .env 나 배포 서버 환경변수에만 넣는다.
@@ -13,6 +14,8 @@ import re
 import secrets
 import urllib.error
 import urllib.request
+
+from sqlalchemy import or_
 
 from .extensions import db
 from .models import Recipe, User
@@ -25,6 +28,8 @@ PAGE_SIZE = 1000                      # API 한 번에 받을 수 있는 최대 
 PUBLIC_USERNAME = "public_recipes"    # 공공 레시피 작성자 (로그인용 계정 아님)
 PUBLIC_NICKNAME = "식품의약품안전처"
 SOURCE_NAME = "식품의약품안전처 조리식품의 레시피 DB (식품안전나라)"
+# 재료 나누는 방식을 고치면 1 올린다. 예전 방식으로 저장된 레시피는 서버를 켤 때 새 방식으로 다시 정리한다.
+PARSER_VERSION = 2
 
 
 class PublicAPIError(Exception):
@@ -249,7 +254,7 @@ def convert_row(row):
         "ingredients": ingredients[:40],
         "steps": steps,
         "is_public": True,
-        "info": {"source": SOURCE_NAME, "nutrition": {k: v for k, v in nutrition.items() if v[0] is not None}},
+        "info": {"source": SOURCE_NAME, "parser": PARSER_VERSION, "nutrition": {k: v for k, v in nutrition.items() if v[0] is not None}},
     }
 
 
@@ -265,29 +270,47 @@ def public_author():
     return user
 
 
-def import_rows(rows, batch=200):
-    """원본 목록을 저장. (새로 넣은 수, 이미 있어 건너뛴 수, 형식이 맞지 않아 뺀 수)"""
+def import_rows(rows, batch=200, refresh=False):
+    """원본 목록을 저장. (새로 넣은 수, 이미 있어 건너뛴 수, 형식이 맞지 않아 뺀 수, 다시 정리한 수)
+
+    refresh=True 면 이미 있는 레시피도 지금 방식으로 재료·조리 순서를 다시 정리한다 (좋아요·즐겨찾기는 그대로).
+    """
     author = public_author()
-    existing = set(db.session.scalars(db.select(Recipe.external_id).where(Recipe.external_id.is_not(None))))
-    added = skipped = bad = 0
+    existing = dict(db.session.execute(
+        db.select(Recipe.external_id, Recipe.id).where(Recipe.external_id.is_not(None))).all())
+    added = skipped = bad = refreshed = 0
     for row in rows:
         data = convert_row(row)
         if data is None:
             bad += 1
             continue
+        info = json.dumps(data["info"], ensure_ascii=False)
         if data["external_id"] in existing:
-            skipped += 1
-            continue
-        recipe = Recipe(author_id=author.id, origin="public", external_id=data["external_id"],
-                        extra_info=json.dumps(data["info"], ensure_ascii=False))
-        apply_recipe_data(recipe, data)
-        db.session.add(recipe)
-        existing.add(data["external_id"])
-        added += 1
-        if added % batch == 0:
+            if not refresh:
+                skipped += 1
+                continue
+            recipe = db.session.get(Recipe, existing[data["external_id"]])
+            recipe.extra_info = info
+            apply_recipe_data(recipe, data)
+            refreshed += 1
+        else:
+            recipe = Recipe(author_id=author.id, origin="public", external_id=data["external_id"], extra_info=info)
+            apply_recipe_data(recipe, data)
+            db.session.add(recipe)
+            db.session.flush()
+            existing[data["external_id"]] = recipe.id
+            added += 1
+        if (added + refreshed) % batch == 0:
             db.session.commit()
     db.session.commit()
-    return added, skipped, bad
+    return added, skipped, bad, refreshed
+
+
+def outdated_count():
+    """예전 방식(PARSER_VERSION 보다 낮음)으로 정리된 공공 레시피 수"""
+    current = f'"parser": {PARSER_VERSION}'
+    return db.session.scalar(db.select(db.func.count(Recipe.id)).where(
+        Recipe.origin == "public", or_(Recipe.extra_info.is_(None), ~Recipe.extra_info.contains(current)))) or 0
 
 
 def public_count():
@@ -295,14 +318,15 @@ def public_count():
 
 
 def import_public_in_background(app, key):
-    """서버 시작 때 한 번: 공공 레시피가 하나도 없을 때만 가져온다 (이미 있으면 아무것도 안 함)."""
+    """서버 시작 때: 공공 레시피가 없으면 가져오고, 예전 방식으로 정리된 것이 있으면 다시 정리한다. 둘 다 아니면 아무것도 안 함."""
     with app.app_context():
         try:
-            if public_count():
+            refresh = public_count() > 0
+            if refresh and not outdated_count():
                 return
-            app.logger.warning("공공 레시피를 가져오는 중이에요…")
-            added, skipped, bad = import_rows(fetch_rows(key))
-            app.logger.warning("공공 레시피 %d개 저장 (이미 있음 %d, 형식이 맞지 않아 뺌 %d)", added, skipped, bad)
+            app.logger.warning("공공 레시피를 %s 중이에요…", "다시 정리하는" if refresh else "가져오는")
+            added, skipped, bad, refreshed = import_rows(fetch_rows(key), refresh=refresh)
+            app.logger.warning("공공 레시피 %d개 저장, %d개 다시 정리 (형식이 맞지 않아 뺌 %d)", added, refreshed, bad)
         except Exception as e:  # 가져오기에 실패해도 사이트는 그대로 동작해야 한다
             db.session.rollback()
             app.logger.warning("공공 레시피를 가져오지 못했어요: %s", e)

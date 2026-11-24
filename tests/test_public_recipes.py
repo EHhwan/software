@@ -87,10 +87,10 @@ def test_convert_row_category_and_empty(rows):
 
 # ---------- 저장 ----------
 def test_import_saves_public_recipes_once(app, rows, imported):
-    assert imported == (5, 0, 1)  # 5개 저장, 재료 없는 1개 제외
+    assert imported == (5, 0, 1, 0)  # 5개 저장, 재료 없는 1개 제외
     with app.app_context():
         again = pr.import_rows(rows)
-        assert again == (0, 5, 1)  # 다시 실행해도 중복 저장 안 함
+        assert again == (0, 5, 1, 0)  # 다시 실행해도 중복 저장 안 함
         assert pr.public_count() == 5
         author = db.session.scalar(db.select(User).filter_by(username=pr.PUBLIC_USERNAME))
         assert author.nickname == "식품의약품안전처"
@@ -210,3 +210,36 @@ def test_ingredient_rows_saved(app, imported):
     with app.app_context():
         n = db.session.scalar(db.select(db.func.count(Ingredient.id)).join(Recipe).where(Recipe.origin == "public"))
         assert n > 20
+
+
+def test_refresh_reparses_old_recipes_and_keeps_likes(app, client, make_user, rows, imported):
+    """재료 나누는 방식을 고친 뒤: 예전 방식으로 저장된 레시피를 다시 정리하고, 좋아요는 그대로 둔다."""
+    from app.models import Like
+    uid = make_user()
+    with app.app_context():
+        r = db.session.scalar(db.select(Recipe).filter_by(external_id="COOKRCP01:28"))
+        rid = r.id
+        r.ingredients[0].name = "예전 방식 이름"
+        r.extra_info = json.dumps({"source": pr.SOURCE_NAME})  # 버전 표시가 없는 예전 데이터
+        db.session.add(Like(user_id=uid, recipe_id=rid))
+        db.session.commit()
+        assert pr.outdated_count() == 1
+        assert pr.import_rows(rows, refresh=True)[3] == 5
+        r = db.session.get(Recipe, rid)
+        assert r.ingredients[0].name == "연두부" and pr.outdated_count() == 0
+        assert db.session.get(Like, (uid, rid)) is not None
+
+
+def test_background_import_refreshes_only_when_outdated(app, rows, imported, monkeypatch):
+    calls = []
+    monkeypatch.setattr(pr, "fetch_rows", lambda key: calls.append(key) or rows)
+    pr.import_public_in_background(app, "key")
+    assert calls == []  # 모두 최신 방식이면 API 를 부르지 않는다
+    with app.app_context():
+        r = db.session.scalar(db.select(Recipe).filter_by(external_id="COOKRCP01:28"))
+        r.extra_info = None
+        db.session.commit()
+    pr.import_public_in_background(app, "key")
+    assert calls == ["key"]
+    with app.app_context():
+        assert pr.outdated_count() == 0
