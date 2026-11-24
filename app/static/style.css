@@ -205,6 +205,19 @@ textarea.form-control { min-height: 96px; }
 .rm-tabs a.active { color: var(--rm-display); box-shadow: inset 0 -2px var(--rm-display); font-weight: 600; }
 .rm-tabs .rm-count { margin-left: auto; font-size: 13px; color: var(--rm-caption); }
 
+/* 다른 칸에도 검색 결과가 있을 때: 개수를 크게, 틴트 카드 전체가 링크 */
+.rm-other-hint { display: flex; align-items: center; gap: 16px; padding: 14px 20px; margin: 0 0 12px; border-radius: var(--rm-r-lg); border: 1px solid #a9d3c5; border-left: 6px solid var(--rm-mint); background: var(--rm-mint-tint); box-shadow: var(--rm-shadow-sm); color: var(--rm-body); transition: box-shadow .15s ease-out, transform .15s ease-out, border-color .15s ease-out; }
+.rm-other-hint:hover { box-shadow: var(--rm-shadow-md); transform: translateY(-1px); border-color: var(--rm-mint-text); color: var(--rm-body); }
+.rm-other-hint.rm-other-community { border-color: #f6cfb6; border-left-color: var(--rm-peach); background: var(--rm-peach-tint); }
+.rm-other-hint.rm-other-community:hover { border-color: var(--rm-peach-text); }
+.rm-other-count { font-size: 32px; font-weight: 600; letter-spacing: -.03em; color: var(--rm-display); font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.rm-other-count small { font-size: 16px; font-weight: 500; margin-left: 2px; letter-spacing: 0; }
+.rm-other-text { display: grid; gap: 2px; min-width: 0; }
+.rm-other-text strong { font-size: 18px; font-weight: 600; color: var(--rm-ink); overflow-wrap: anywhere; }
+.rm-other-text span { font-size: 13px; color: var(--rm-caption); }
+.rm-other-go { margin-left: auto; flex: none; }
+@media (max-width: 767px) { .rm-other-hint { flex-wrap: wrap; gap: 8px 12px; padding: 12px 14px; } .rm-other-text strong { font-size: 16px; } .rm-other-go { margin-left: 0; width: 100%; } }
+
 /* 커뮤니티 레시피 / 공공 레시피 전환: 개수가 가장 크게 */
 .rm-source-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 12px; }
 .rm-source-switch a { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; align-items: center; padding: 12px 20px; border: 1px solid var(--rm-line); border-radius: var(--rm-r-lg); background: var(--rm-surface); box-shadow: var(--rm-shadow-sm); color: var(--rm-ink); transition: box-shadow .15s ease-out, transform .15s ease-out, border-color .15s ease-out; }
@@ -471,7 +484,8 @@ mark.rm-ink { background: linear-gradient(transparent 30%, var(--rm-mint-tint) 3
   .rm-feature-row .rm-feature:last-child { grid-column: auto; }
   .rm-source-switch { gap: 8px; }
   .rm-source-switch a { padding: 10px 14px; }
-  .rm-source-name { font-size: 16px; }
+  .rm-source-name { font-size: 15px; white-space: nowrap; }
+  .rm-source-switch a { gap: 0 8px; }
   .rm-source-desc { display: none; }
   .rm-source-total { font-size: 24px; }
   .rm-panel { padding: 16px; }

@@ -147,7 +147,7 @@ def test_search_hints_other_source(client, make_user, make_recipe, imported):
     uid = make_user()
     make_recipe(uid, title="두부 김치", ingredients=(("두부", 1, "모"), ("김치", 100, "g")))
     html = client.get("/?q=두부").get_data(as_text=True)
-    assert "두부 김치" in html and "공공 레시피에서 보기" in html  # 공공 레시피에도 두부 요리가 있다고 알려 준다
+    assert "두부 김치" in html and "공공 레시피에서 보기" in html and "rm-other-hint" in html  # 공공 레시피에도 두부 요리가 있다고 알려 준다
     assert "새우 두부 계란찜" in client.get("/?q=두부&source=public").get_data(as_text=True)
 
 

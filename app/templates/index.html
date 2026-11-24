@@ -100,7 +100,11 @@
 
 {% set other = 'public' if filters.source == 'community' else 'community' %}
 {% if filters.q and totals[other] %}
-<p class="rm-subtle mb-3">‘{{ filters.q }}’ 검색 결과가 {{ sources[other] }}에도 {{ totals[other] }}개 있어요. <a href="{{ url_with(source=None if other == 'community' else other, origin=None, time=None) }}">{{ sources[other] }}에서 보기 →</a></p>
+<a class="rm-other-hint rm-other-{{ other }}" href="{{ url_with(source=None if other == 'community' else other, origin=None, time=None) }}">
+  <span class="rm-other-count">{{ totals[other] }}<small>개</small></span>
+  <span class="rm-other-text"><strong>{{ sources[other] }}에도 ‘{{ filters.q }}’ 검색 결과가 있어요</strong><span>{{ '식품의약품안전처 레시피 DB에서 찾은 결과예요.' if other == 'public' else '회원이 올리거나 AI로 만든 레시피에서 찾은 결과예요.' }}</span></span>
+  <span class="rm-btn rm-btn-sm rm-other-go" aria-hidden="true">{{ sources[other] }}에서 보기 →</span>
+</a>
 {% endif %}
 
 {% call recipe_grid(recipes, likes, liked, marked) %}
